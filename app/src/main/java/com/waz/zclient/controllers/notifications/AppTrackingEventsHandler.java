@@ -40,6 +40,7 @@ import com.waz.zclient.core.controllers.tracking.events.filetransfer.Successfull
 import com.waz.zclient.core.controllers.tracking.events.media.CompletedMediaActionEvent;
 import com.waz.zclient.core.controllers.tracking.events.media.SentPictureEvent;
 import com.waz.zclient.core.controllers.tracking.events.notifications.NotificationInformationEvent;
+import com.waz.zclient.core.controllers.tracking.events.onboarding.GeneratedUsernameEvent;
 import org.threeten.bp.Duration;
 import timber.log.Timber;
 
@@ -158,7 +159,7 @@ public class AppTrackingEventsHandler implements TrackingEventsHandler {
 
     @Override
     public void onHandleValidation(HandlesTrackingService.HandlesValidationTrackingEvent event) {
-        Timber.i("Handles validation %s", event.success() ? "Succeeded" : "Failed");
+        trackingController.tagEvent(new GeneratedUsernameEvent(event.success()));
     }
 
     private boolean isEphemeral(TrackingEvent trackingEvent) {

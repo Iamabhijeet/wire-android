@@ -241,6 +241,7 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
         getControllerFactory().getConversationScreenController().removeConversationControllerObservers(this);
         getControllerFactory().getNavigationController().removeNavigationControllerObserver(this);
         getControllerFactory().getConfirmationController().removeConfirmationObserver(this);
+        getControllerFactory().getUsernameController().removeUsernamesObserver(this);
 
         super.onStop();
     }
@@ -1270,6 +1271,13 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
     }
 
     private void showFirstAssignUsernameScreen(String name, String username) {
+        // Check if username screen is already shown
+        Fragment fragment = getChildFragmentManager().findFragmentById(R.id.fl__conversation_list_main);
+        if (fragment instanceof FirstTimeAssignUsernameFragment) {
+            return;
+        }
+
+
         getChildFragmentManager()
             .beginTransaction()
             .setCustomAnimations(R.anim.fade_in,
