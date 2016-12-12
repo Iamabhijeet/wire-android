@@ -162,7 +162,11 @@
     <string translatable="false" name="pref_dev_version_info_id_key">USER_PREFS_DEV_VERSIONS_ID</string>
     <string translatable="false" name="pref_dev_version_info_id_title">Versions</string>
     <string translatable="false" name="pref_dev_assets_v3_key">@string/zms_assets_v3</string>
-    <string translatable="false" name="pref_dev_assets_v3_title">Send assets using API v3</string>
+    <string translatable="false" name="pref_dev_assets_v3_title">Assets v3</string>
+    <string translatable="false" name="pref_dev_assets_v3_summary">Send assets using the Assets v3 API</string>
+    <string translatable="false" name="pref_dev_calling_v3_key">@string/zms_calling_v3</string>
+    <string translatable="false" name="pref_dev_calling_v3_title">Calling v3</string>
+    <string translatable="false" name="pref_dev_calling_v3_summary">Start calls using the Calling v3 library</string>
 
 
     <!--Notifications preferences-->
