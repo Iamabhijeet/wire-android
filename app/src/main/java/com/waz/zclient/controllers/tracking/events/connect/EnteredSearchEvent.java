@@ -18,13 +18,16 @@
 package com.waz.zclient.controllers.tracking.events.connect;
 
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import com.waz.zclient.core.controllers.tracking.attributes.Attribute;
 import com.waz.zclient.core.controllers.tracking.events.Event;
 
 public class EnteredSearchEvent extends Event {
 
-    public EnteredSearchEvent(boolean isAddingToGroupConversation) {
+    public EnteredSearchEvent(boolean isAddingToGroupConversation, String filter) {
         attributes.put(Attribute.CONTEXT, isAddingToGroupConversation ? "add_to_conversation" : "startui");
+        boolean byUsername = !TextUtils.isEmpty(filter) && filter.charAt(0) == '@';
+        attributes.put(Attribute.BY_USERNAME, String.valueOf(byUsername));
     }
 
     @NonNull

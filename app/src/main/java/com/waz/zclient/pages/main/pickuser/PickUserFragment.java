@@ -957,7 +957,7 @@ public class PickUserFragment extends BaseFragment<PickUserFragment.Container> i
                 if (!hasSelectedUsers) {
                     getStoreFactory().getPickUserStore().searchContacts(filter);
                 }
-                getControllerFactory().getTrackingController().tagEvent(new EnteredSearchEvent(isAddingToConversation()));
+                getControllerFactory().getTrackingController().tagEvent(new EnteredSearchEvent(isAddingToConversation(), filter));
                 break;
             case SHOW_TOP_USERS_AS_LIST:
             case SHOW_TOP_USERS_AND_RECOMMENDED:
