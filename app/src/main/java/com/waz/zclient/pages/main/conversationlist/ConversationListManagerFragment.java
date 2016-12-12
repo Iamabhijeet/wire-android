@@ -1262,7 +1262,6 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
 
     @Override
     public void onUsernameAttemptsExhausted(String name) {
-        showFirstAssignUsernameScreen(name, "");
     }
 
     @Override

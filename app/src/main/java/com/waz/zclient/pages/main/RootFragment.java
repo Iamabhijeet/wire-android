@@ -911,8 +911,6 @@ public class RootFragment extends BaseFragment<RootFragment.Container> implement
 
     @Override
     public void onUsernameAttemptsExhausted(String name) {
-        rightSideShouldBeBlank = true;
-        openMessageStream(Page.NONE, BlankFragment.newInstance(), BlankFragment.TAG);
     }
 
     @Override
