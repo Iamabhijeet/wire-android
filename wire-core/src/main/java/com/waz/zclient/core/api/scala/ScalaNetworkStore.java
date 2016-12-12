@@ -23,6 +23,7 @@ import com.waz.api.ZMessagingApi;
 import com.waz.zclient.core.stores.network.INetworkStore;
 import com.waz.zclient.core.stores.network.NetworkAction;
 import com.waz.zclient.core.stores.network.NetworkStoreObserver;
+import timber.log.Timber;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -37,6 +38,7 @@ public class ScalaNetworkStore implements INetworkStore {
     final private ModelObserver<ConnectionIndicator> connectionIndicatorModelObserver = new ModelObserver<ConnectionIndicator>() {
         @Override
         public void updated(ConnectionIndicator model) {
+            Timber.i("NETWORK_TRACE: ConnectionIndicator updated, net=%s, error=%b, websocket=%b", model.getNetworkMode().toString(), model.isConnectionError(), model.isWebSocketConnected());
             networkMode = model.getNetworkMode();
             isServerError = hasInternetConnection() && model.isConnectionError(); //only care about server errors when there is an internet connection
             notifyConnectivityChange();
@@ -44,6 +46,7 @@ public class ScalaNetworkStore implements INetworkStore {
     };
 
     public ScalaNetworkStore(ZMessagingApi zMessagingApi) {
+        Timber.i("NETWORK_TRACE: ScalaNetworkStore created, %s", this.toString());
         connectionIndicator = zMessagingApi.getConnectionIndicator();
         connectionIndicatorModelObserver.setAndUpdate(connectionIndicator);
     }
@@ -66,11 +69,13 @@ public class ScalaNetworkStore implements INetworkStore {
 
     @Override
     public boolean hasInternetConnection() {
+        Timber.i("NETWORK_TRACE: hasInternetConnection=%b", networkMode != NetworkMode.OFFLINE);
         return networkMode != NetworkMode.OFFLINE;
     }
 
     @Override
     public boolean hasWifiConnection() {
+        Timber.i("NETWORK_TRACE: hasWifiConnection=%b", networkMode == NetworkMode.WIFI);
         return networkMode == NetworkMode.WIFI;
     }
 
