@@ -67,7 +67,7 @@ public class TextViewUtils {
             return string;
         }
 
-        final int highlightEnd = string.lastIndexOf('_') - 1;
+        final int highlightEnd = string.lastIndexOf('_');
         if (highlightStart >= highlightEnd) {
             Timber.e("Failed to highlight text - make sure you have 2 _ markers to denote start and end of highlight region");
             return string;
@@ -83,13 +83,13 @@ public class TextViewUtils {
         SpannableString colorSpannable = new SpannableString(stringBuilder.toString());
         colorSpannable.setSpan(new ForegroundColorSpan(highlightColor),
                                highlightStart,
-                               highlightEnd,
+                               highlightEnd - 1,
                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         if (bold) {
             colorSpannable.setSpan(new CustomTypefaceSpan("",
                                                           context.getResources().getString(R.string.wire__typeface__bold)),
                                    highlightStart,
-                                   highlightEnd,
+                                   highlightEnd - 1,
                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         return colorSpannable;
