@@ -22,21 +22,17 @@ import android.support.test.espresso.NoMatchingViewException;
 import android.support.test.espresso.ViewAssertion;
 import android.support.test.runner.AndroidJUnit4;
 import android.view.View;
-
 import com.waz.zclient.MainTestActivity;
 import com.waz.zclient.R;
 import com.waz.zclient.pages.main.profile.preferences.dialogs.ChangeUsernamePreferenceDialogFragment;
 import com.waz.zclient.testutils.FragmentTest;
-
+import com.waz.zclient.utils.StringUtils;
 import junit.framework.AssertionFailedError;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 import static android.support.test.espresso.Espresso.onView;
-import static android.support.test.espresso.action.ViewActions.typeText;
+import static android.support.test.espresso.action.ViewActions.typeTextIntoFocusedView;
 import static android.support.test.espresso.assertion.ViewAssertions.matches;
-import static android.support.test.espresso.core.deps.guava.base.Verify.verify;
 import static android.support.test.espresso.matcher.ViewMatchers.withId;
 import static android.support.test.espresso.matcher.ViewMatchers.withText;
 
@@ -51,20 +47,20 @@ public class UsernameEditFragmentTest extends FragmentTest<MainTestActivity> {
         String currentUsername = "current_username";
         attachFragment(ChangeUsernamePreferenceDialogFragment.newInstance(currentUsername, true), ChangeUsernamePreferenceDialogFragment.TAG);
         Thread.sleep(400);
-        onView(withId(R.id.acet__change_username)).perform(typeText("?"));
+        onView(withId(R.id.acet__change_username)).perform(typeTextIntoFocusedView("?"));
         Thread.sleep(400);
         onView(withId(R.id.acet__change_username)).check(matches(withText(currentUsername)));
     }
 
     @Test
     public void assertLongUsernameShowsError() throws InterruptedException {
-        String currentUsername = "current_username";
+        String currentUsername = "currentusername";
+        String typeText = "12345678912345678912345";
         attachFragment(ChangeUsernamePreferenceDialogFragment.newInstance(currentUsername, true), ChangeUsernamePreferenceDialogFragment.TAG);
         Thread.sleep(400);
-        onView(withId(R.id.acet__change_username)).perform(typeText("12345678912345678912345"));
+        onView(withId(R.id.acet__change_username)).perform(typeTextIntoFocusedView(typeText));
         Thread.sleep(400);
-        CharSequence error = ((TextInputLayout) withId(R.id.til__change_username)).getError();
-        verify(error != null && error.length() > 0);
+        onView(withId(R.id.acet__change_username)).check(matches(withText(StringUtils.truncate(currentUsername + typeText, 21))));
     }
 
     @Test
@@ -72,7 +68,7 @@ public class UsernameEditFragmentTest extends FragmentTest<MainTestActivity> {
         String currentUsername = "";
         attachFragment(ChangeUsernamePreferenceDialogFragment.newInstance(currentUsername, true), ChangeUsernamePreferenceDialogFragment.TAG);
         Thread.sleep(400);
-        onView(withId(R.id.acet__change_username)).perform(typeText("1"));
+        onView(withId(R.id.acet__change_username)).perform(typeTextIntoFocusedView("1"));
         Thread.sleep(400);
         onView(withId(R.id.til__change_username)).check(new ViewAssertion() {
             @Override
@@ -90,7 +86,7 @@ public class UsernameEditFragmentTest extends FragmentTest<MainTestActivity> {
         String currentUsername = "";
         attachFragment(ChangeUsernamePreferenceDialogFragment.newInstance(currentUsername, true), ChangeUsernamePreferenceDialogFragment.TAG);
         Thread.sleep(400);
-        onView(withId(R.id.acet__change_username)).perform(typeText("1"));
+        onView(withId(R.id.acet__change_username)).perform(typeTextIntoFocusedView("1"));
         Thread.sleep(400);
         onView(withId(R.id.til__change_username)).check(new ViewAssertion() {
             @Override

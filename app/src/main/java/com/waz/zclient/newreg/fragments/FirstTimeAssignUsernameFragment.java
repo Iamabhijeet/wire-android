@@ -27,11 +27,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import com.waz.api.AccentColor;
 import com.waz.api.ImageAsset;
 import com.waz.api.Self;
 import com.waz.zclient.OnBackPressedListener;
 import com.waz.zclient.R;
-import com.waz.zclient.controllers.accentcolor.IAccentColorController;
 import com.waz.zclient.core.api.scala.ModelObserver;
 import com.waz.zclient.core.controllers.tracking.events.onboarding.OpenedUsernameFAQEvent;
 import com.waz.zclient.pages.BaseFragment;
@@ -90,8 +90,8 @@ public class FirstTimeAssignUsernameFragment extends BaseFragment<FirstTimeAssig
         ZetaButton chooseYourOwnButton = ViewUtils.getView(view, R.id.zb__username_first_assign__choose);
         ZetaButton keepButton = ViewUtils.getView(view, R.id.zb__username_first_assign__keep);
         TypefaceTextView summaryTextView = ViewUtils.getView(view, R.id.ttv__username_first_assign__summary);
-        IAccentColorController colorController = getControllerFactory().getAccentColorController();
-        final int accentColor = colorController != null ? colorController.getAccentColor().getColor() : Color.TRANSPARENT;
+        AccentColor accentColor = getControllerFactory().getAccentColorController().getAccentColor();
+        final int color = accentColor != null ? accentColor.getColor() : Color.TRANSPARENT;
         final int darkenColor = ColorUtils.injectAlpha(ResourceUtils.getResourceFloat(getResources(), R.dimen.background_solid_black_overlay_opacity),
             Color.BLACK);
 
@@ -103,7 +103,7 @@ public class FirstTimeAssignUsernameFragment extends BaseFragment<FirstTimeAssig
         selfModelObserver.setAndUpdate(getStoreFactory().getZMessagingApiStore().getApi().getSelf());
 
         chooseYourOwnButton.setIsFilled(true);
-        chooseYourOwnButton.setAccentColor(accentColor);
+        chooseYourOwnButton.setAccentColor(color);
         chooseYourOwnButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -113,7 +113,7 @@ public class FirstTimeAssignUsernameFragment extends BaseFragment<FirstTimeAssig
 
         suggestedUsername = getArguments().getString(ARG_SUGGESTED_USERNAME, "");
         keepButton.setIsFilled(false);
-        keepButton.setAccentColor(accentColor);
+        keepButton.setAccentColor(color);
         keepButton.setTextColor(getResources().getColor(R.color.white));
         keepButton.setOnClickListener(new View.OnClickListener() {
             @Override
