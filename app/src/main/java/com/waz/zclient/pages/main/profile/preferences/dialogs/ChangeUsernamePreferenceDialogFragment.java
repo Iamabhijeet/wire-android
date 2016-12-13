@@ -56,43 +56,49 @@ public class ChangeUsernamePreferenceDialogFragment extends BaseDialogFragment<C
     private boolean cancelEnabled = true;
 
     private TextWatcher usernameTextWatcher = new TextWatcher() {
-        private String lastText;
+        private String lastText = "";
 
         @Override
         public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            lastText = charSequence.toString();
+            String currentText = charSequence.toString();
+            if (getStoreFactory() != null &&
+                getStoreFactory().getZMessagingApiStore().getApi().getUsernames().isUsernameValid(charSequence.toString()).reason() != UsernameValidationError.INVALID_CHARACTERS) {
+                lastText = currentText;
+            }
         }
 
         @Override
         public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            String lowercaseString = charSequence.toString().toLowerCase(Locale.getDefault());
-            if (!lowercaseString.equals(charSequence.toString())) {
-                usernameEditText.setTextKeepState(lowercaseString);
+        }
+
+        @Override
+        public void afterTextChanged(Editable editable) {
+            String normalText = editable.toString();
+            String lowercaseString = normalText.toLowerCase(Locale.getDefault());
+            if (!lowercaseString.equals(normalText)) {
+                usernameEditText.setText(lowercaseString);
             } else {
                 IStoreFactory storeFactory = getStoreFactory();
                 if (storeFactory == null || storeFactory.isTornDown()) {
                     return;
                 }
-                UsernameValidation validation = storeFactory.getZMessagingApiStore().getApi().getUsernames().isUsernameValid(charSequence.toString());
+                UsernameValidation validation = storeFactory.getZMessagingApiStore().getApi().getUsernames().isUsernameValid(normalText);
                 if (!validation.isValid()) {
                     usernameInputLayout.setError(getErrorMessage(validation.reason()));
                     if (validation.reason() == UsernameValidationError.INVALID_CHARACTERS) {
-                        usernameEditText.setTextKeepState(lastText);
+                        usernameEditText.setText(lastText);
                         editBoxShakeAnimation();
                     } else if (validation.reason() == UsernameValidationError.TOO_LONG) {
-                        usernameEditText.setTextKeepState(lastText);
+                        usernameEditText.setText(lastText);
                     }
                 } else {
                     usernameInputLayout.setError("");
-                    if (!storeFactory.getZMessagingApiStore().getApi().getSelf().getUsername().equals(charSequence.toString())) {
-                        storeFactory.getZMessagingApiStore().getApi().getUsernames().isUsernameAvailable(charSequence.toString(), usernameAvailableCallback);
+                    if (!storeFactory.getZMessagingApiStore().getApi().getSelf().getUsername().equals(normalText)) {
+                        storeFactory.getZMessagingApiStore().getApi().getUsernames().isUsernameAvailable(normalText, usernameAvailableCallback);
                     }
                 }
             }
-        }
-
-        @Override
-        public void afterTextChanged(Editable editable) {
+            usernameEditText.setSelection(usernameEditText.getText().length());
         }
     };
 

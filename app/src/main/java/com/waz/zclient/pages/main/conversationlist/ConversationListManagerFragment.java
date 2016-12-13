@@ -1218,8 +1218,10 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
     }
 
     public void hideFirstAssignUsernameScreen() {
-        getChildFragmentManager().popBackStackImmediate(FirstTimeAssignUsernameFragment.TAG,
-                                                        FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        if (getChildFragmentManager().findFragmentByTag(FirstTimeAssignUsernameFragment.TAG) != null) {
+            getChildFragmentManager().popBackStackImmediate(FirstTimeAssignUsernameFragment.TAG,
+                FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        }
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -1266,7 +1268,7 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
 
     @Override
     public void onCloseFirstAssignUsernameScreen() {
-
+        hideFirstAssignUsernameScreen();
     }
 
     private void showFirstAssignUsernameScreen(String name, String username) {
