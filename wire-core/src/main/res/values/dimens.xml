@@ -146,6 +146,7 @@
     <dimen name="wire__text_size__medium">24dp</dimen>
     <dimen name="wire__text_size__big">28dp</dimen>
     <dimen name="wire__text_size__huge">32dp</dimen>
+    <dimen name="wire__text_size__insane">160dp</dimen>
     <dimen name="wire__text_size__emoji">40sp</dimen>
     <dimen name="wire__text_spacing__tiny">2dp</dimen>
     <dimen name="wire__text_spacing__medium">4dp</dimen>

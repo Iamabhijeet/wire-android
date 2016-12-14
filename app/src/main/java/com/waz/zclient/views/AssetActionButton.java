@@ -18,9 +18,6 @@
 package com.waz.zclient.views;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import com.waz.api.Asset;
@@ -29,9 +26,7 @@ import com.waz.api.PlaybackControls;
 import com.waz.api.ProgressIndicator;
 import com.waz.zclient.R;
 import com.waz.zclient.core.api.scala.ModelObserver;
-import com.waz.zclient.ui.utils.TypefaceUtils;
-
-import java.util.Locale;
+import com.waz.zclient.ui.drawable.FileDrawable;
 
 public class AssetActionButton extends GlyphProgressView {
 
@@ -206,58 +201,6 @@ public class AssetActionButton extends GlyphProgressView {
             progressIndicatorObserver.clear();
         } else {
             progressIndicatorObserver.addAndUpdate(progressIndicator);
-        }
-    }
-
-    private static class FileDrawable extends Drawable {
-
-        private final int textCorrectionSpacing; //to align the text nicely within the glyph bounds
-
-        private final String fileGlyph;
-        private final String extension;
-
-        private final Paint glyphPaint = new Paint();
-        private final Paint textPaint = new Paint();
-
-        FileDrawable(Context context, String extension) {
-            this.fileGlyph = context.getResources().getString(R.string.glyph__file);
-            this.extension = extension;
-            this.textCorrectionSpacing = context.getResources().getDimensionPixelSize(R.dimen.wire__padding__4);
-
-            glyphPaint.setTypeface(TypefaceUtils.getTypeface(TypefaceUtils.getGlyphsTypefaceName()));
-            glyphPaint.setColor(context.getResources().getColor(R.color.black_48));
-            glyphPaint.setAntiAlias(true);
-            glyphPaint.setTextAlign(Paint.Align.CENTER);
-            glyphPaint.setTextSize(context.getResources().getDimensionPixelSize(R.dimen.content__audio_message__button__size));
-
-            textPaint.setColor(context.getResources().getColor(R.color.white));
-            textPaint.setAntiAlias(true);
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTextSize(context.getResources().getDimensionPixelSize(R.dimen.wire__text_size__tiny));
-        }
-
-        @Override
-        public void draw(Canvas canvas) {
-            canvas.drawText(fileGlyph, getBounds().width() / 2, getBounds().height(), glyphPaint);
-            if (extension != null) {
-                canvas.drawText(extension.toUpperCase(Locale.getDefault()),
-                                getBounds().width() / 2,
-                                getBounds().height() - textCorrectionSpacing,
-                                textPaint);
-            }
-        }
-
-        @Override
-        public void setAlpha(int alpha) {
-        }
-
-        @Override
-        public void setColorFilter(ColorFilter colorFilter) {
-        }
-
-        @Override
-        public int getOpacity() {
-            return 0;
         }
     }
 
