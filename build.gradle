@@ -72,21 +72,21 @@ ext {
     playServicesVersion = '10.0.1'
 
     audioVersion = System.getenv("AUDIO_VERSION") ?: '1.205.0@aar'
-    zMessagingDevVersionBase = '88.1331'
+    zMessagingDevVersionBase = '88-SNAPSHOT'
     zMessagingDevVersion = "${zMessagingDevVersionBase}@aar"
     // Release version number must be like this X.0(.Y)
     zMessagingReleaseVersion = System.getenv("ZMESSAGING_VERSION") ?: '88.2.322@aar'
 
-    avsVersion = '2.9.69@aar'
-    avsInternalVersion = avsVersion //leave this here in case we want to test specific AVS versions on internal
-    avsName = 'avs'
-    avsGroup = 'com.wire'
+//    avsVersion = '2.9.69@aar'
+//    avsInternalVersion = avsVersion //leave this here in case we want to test specific AVS versions on internal
+//    avsName = 'avs'
+//    avsGroup = 'com.wire'
 
     // proprietary avs artifact configuration
-    customAvsVersion = '2.9.17@aar'
-    customAvsInternalVersion = customAvsVersion
-    customAvsName = 'avs'
-    customAvsGroup = 'com.wearezeta.avs'
+//    customAvsVersion = '2.9.17@aar'
+//    customAvsInternalVersion = customAvsVersion
+//    customAvsName = 'avs'
+//    customAvsGroup = 'com.wearezeta.avs'
 
     deps = [
             scala               : "org.scala-lang:scala-library:$scalaVersion",

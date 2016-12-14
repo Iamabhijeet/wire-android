@@ -20,8 +20,7 @@ package com.waz.zclient.calling.controllers
 import com.waz.api.VoiceChannelState.OTHER_CALLING
 import com.waz.model.ConvId
 import com.waz.zclient._
-import com.waz.zclient.common.controllers.{CameraPermission, RecordAudioPermission, PermissionsController}
-import timber.log.Timber
+import com.waz.zclient.common.controllers.{CameraPermission, PermissionsController, RecordAudioPermission}
 
 /**
   * This class is intended to be a relatively small controller that every PermissionsActivity can have access to in order
@@ -29,8 +28,6 @@ import timber.log.Timber
   * related permissions dialogs, that's why it can't be in the GlobalCallController
   */
 class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extends Injectable {
-
-  Timber.d(s"CallPermissionsController starting, context: $cxt")
 
   implicit val eventContext = cxt.eventContext
 
@@ -42,7 +39,14 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
   val videoCall = globController.videoCall
 
   val zms = globController.zms.collect { case Some(v) => v }
+
   val autoAnswerPreference = zms.flatMap(_.prefs.uiPreferenceBooleanSignal(cxt.getResources.getString(R.string.pref_dev_auto_answer_call_key)).signal)
+  val callingV3Preference = zms.flatMap(_.prefs.uiPreferenceBooleanSignal(cxt.getResources.getString(R.string.pref_dev_calling_v3_key)).signal)
+
+  private var callWithV3 = false
+  callingV3Preference {
+    callWithV3 = _
+  }
 
   val currentChannel = globController.currentChannel.collect { case Some(c) => c }
   val incomingCall = currentChannel.map(_.state).map {

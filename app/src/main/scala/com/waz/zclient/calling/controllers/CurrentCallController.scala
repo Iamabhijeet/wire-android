@@ -156,11 +156,11 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   val stateMessageText = Signal(callState, cameraFailed, avsStateAndChangeReason, conversationName, otherSendingVideo) map { values =>
     Timber.d(s"(callState, avsStateAndChangeReason, conversationName, otherSending): $values")
     values match {
-      case (SELF_CALLING, true, _, _, _) => Option(cxt.getString(R.string.calling__self_preview_unavailable_long))
-      case (SELF_JOINING, _, _, _, _) => Option(cxt.getString(R.string.ongoing__connecting))
+      case (SELF_CALLING, true, _, _, _)                                                                      => Option(cxt.getString(R.string.calling__self_preview_unavailable_long))
+      case (SELF_JOINING, _, _, _, _)                                                                         => Option(cxt.getString(R.string.ongoing__connecting))
       case (SELF_CONNECTED, _, StateAndReason(AvsVideoState.STOPPED, AvsVideoReason.BAD_CONNECTION), _, true) => Option(cxt.getString(R.string.ongoing__poor_connection_message))
-      case (SELF_CONNECTED, _, _, otherUserName, false) => Option(cxt.getString(R.string.ongoing__other_turned_off_video, otherUserName))
-      case (SELF_CONNECTED, _, UnknownState, otherUserName, true) => Option(cxt.getString(R.string.ongoing__other_unable_to_send_video, otherUserName))
+      case (SELF_CONNECTED, _, _, otherUserName, false)                                                       => Option(cxt.getString(R.string.ongoing__other_turned_off_video, otherUserName))
+      case (SELF_CONNECTED, _, UnknownState, otherUserName, true)                                             => Option(cxt.getString(R.string.ongoing__other_unable_to_send_video, otherUserName))
       case _ => None
     }
   }
