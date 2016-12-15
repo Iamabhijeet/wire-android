@@ -165,7 +165,6 @@ allprojects {
         maven { url "https://dl.bintray.com/wire-android/releases" }
         maven { url "https://dl.bintray.com/wire-android/snapshots" }
         maven { url "https://dl.bintray.com/wire-android/third-party" }
-        maven { url "http://dl.bintray.com/consp1racy/maven" }
         maven { url "http://maven.localytics.com/public" }
         mavenCentral()
     }
