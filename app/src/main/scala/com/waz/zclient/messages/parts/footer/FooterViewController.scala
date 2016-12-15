@@ -27,6 +27,7 @@ import com.waz.threading.CancellableFuture
 import com.waz.utils._
 import com.waz.utils.events.{ClockSignal, EventContext, Signal}
 import com.waz.zclient.controllers.global.{AccentColorController, SelectionController}
+import com.waz.zclient.messages.MessageView.MsgBindOptions
 import com.waz.zclient.messages.SyncEngineSignals
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.ZTimeFormatter
@@ -45,8 +46,9 @@ class FooterViewController(implicit inj: Injector, context: Context, ec: EventCo
   val signals = inject[SyncEngineSignals]
   val reactions = zms.map(_.reactions)
 
+  val opts = Signal[MsgBindOptions]()
   val messageAndLikes = Signal[MessageAndLikes]()
-  val isSelfMessage = Signal[Boolean]
+  val isSelfMessage = opts.map(_.isSelf)
   val message = messageAndLikes.map(_.message)
   val isLiked = messageAndLikes.map(_.likes.nonEmpty)
   val likedBySelf = messageAndLikes.map(_.likedBySelf)
@@ -68,9 +70,8 @@ class FooterViewController(implicit inj: Injector, context: Context, ec: EventCo
     selfMsg   <- isSelfMessage
     expiring  <- expiring
     focused   <- focused
-  } yield {
+  } yield
     focused || expiring || (selfMsg && !liked)
-  }
 
   val showLikeBtn = for {
     liked <- isLiked

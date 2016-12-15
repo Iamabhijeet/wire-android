@@ -24,25 +24,26 @@ import android.view.View.MeasureSpec
 import android.view.ViewGroup.{LayoutParams, MarginLayoutParams}
 import android.view.{Gravity, View, ViewGroup}
 import android.widget.FrameLayout
-import com.waz.ZLog._
 import com.waz.ZLog.ImplicitTag._
+import com.waz.ZLog._
 import com.waz.model.MessageContent
 import com.waz.service.messages.MessageAndLikes
 import com.waz.zclient.messages.MessageView.MsgBindOptions
+import com.waz.zclient.messages.MessageViewLayout.PartDesc
 
 abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: Int) extends ViewGroup(context, attrs, style) {
   protected val factory: MessageViewFactory
 
-  private var listParts = Seq.empty[MessageViewPart]
-  private var frameParts = Seq.empty[MessageViewPart]
+  protected var listParts = Seq.empty[MessageViewPart]
+  protected var frameParts = Seq.empty[MessageViewPart]
   private var separatorHeight = 0
 
   private val defaultLayoutParams = generateDefaultLayoutParams()
 
   setClipChildren(false)
 
-  protected def setParts(msg: MessageAndLikes, parts: Seq[(MsgPart, Option[MessageContent])], opts: MsgBindOptions): Unit = {
-    verbose(s"setParts: opts: $opts, parts: ${parts.map(_._1)}")
+  protected def setParts(msg: MessageAndLikes, parts: Seq[PartDesc], opts: MsgBindOptions): Unit = {
+    verbose(s"setParts: opts: $opts, parts: ${parts.map(_.tpe)}")
 
     // recycle views in reverse order, recycled views are stored in a Stack, this way we will get the same views back if parts are the same
     // XXX: once views get bigger, we may need to optimise this, we don't need to remove views that will get reused, currently this seems to be fast enough
@@ -52,9 +53,10 @@ abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: I
     }
     removeAllViewsInLayout() // TODO: avoid removing views if not really needed, compute proper diff with previous state
 
-    val views = parts.zipWithIndex map { case ((tpe, content), index) =>
+    val views = parts.zipWithIndex map { case (PartDesc(tpe, content), index) =>
       val view = factory.get(tpe, this)
       view.set(msg, content, opts)
+      view.setVisibility(View.VISIBLE)
       addViewInLayout(view, index, Option(view.getLayoutParams).getOrElse(defaultLayoutParams))
       view
     }
@@ -70,9 +72,15 @@ abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: I
     requestLayout()
   }
 
+  def removeListPart(view: MessageViewPart) = {
+    listParts = listParts.filter(_ != view)
+    removeView(view)
+    factory.recycle(view)
+  }
+
   override def onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int): Unit = {
     val w = View.getDefaultSize(getSuggestedMinimumWidth, widthMeasureSpec)
-    var h = 0
+    var h = getPaddingTop + getPaddingBottom
     separatorHeight = 0
     listParts foreach { v =>
       if (v.getVisibility != View.GONE) {
@@ -89,7 +97,7 @@ abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: I
     frameParts foreach { v =>
       if (v.getVisibility != View.GONE) {
         measureChildWithMargins(v, widthMeasureSpec, 0, hSpec, 0)
-        h = math.max(h, v.getMeasuredHeight + separatorHeight)
+        h = math.max(h, v.getMeasuredHeight + separatorHeight + getPaddingTop + getPaddingBottom)
       }
     }
 
@@ -99,7 +107,7 @@ abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: I
   override def onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int): Unit = {
     val w = r - l
     val h = b - t
-    var top = 0
+    var top = getPaddingTop
     listParts foreach { v =>
       if (v.getVisibility != View.GONE) {
         val vh = v.getMeasuredHeight
@@ -136,9 +144,9 @@ abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: I
           case Gravity.CENTER_VERTICAL =>
             separatorHeight / 2 + (h - vh) / 2 + m.top - m.bottom
           case Gravity.BOTTOM =>
-            h - vh - m.bottom
+            h - vh - m.bottom - getPaddingBottom
           case _ =>
-            m.top + separatorHeight
+            m.top + separatorHeight + getPaddingTop
         }
         v.layout(left, top, left + vw, top + vh)
       }
@@ -161,4 +169,8 @@ abstract class MessageViewLayout(context: Context, attrs: AttributeSet, style: I
 
   override def generateDefaultLayoutParams(): LayoutParams =
     new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+}
+
+object MessageViewLayout {
+  case class PartDesc(tpe: MsgPart, content: Option[MessageContent] = None)
 }

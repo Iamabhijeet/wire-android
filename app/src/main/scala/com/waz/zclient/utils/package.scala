@@ -37,7 +37,7 @@ package object utils {
 
     def setMarginTop(m: Int) = {
       view.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = m
-      view.invalidate()
+      view.requestLayout()
     }
 
     //TODO improve this so that multiple click listeners can be set from different places at once

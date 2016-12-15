@@ -17,14 +17,22 @@
   */
 package com.waz.zclient.messages.parts.footer
 
+import android.animation.Animator.AnimatorListener
+import android.animation.ValueAnimator.AnimatorUpdateListener
+import android.animation.{Animator, ValueAnimator}
 import android.content.Context
+import android.graphics.Rect
 import android.util.AttributeSet
+import android.view.{View, ViewGroup}
 import android.widget.{FrameLayout, TextView}
+import com.waz.ZLog._
 import com.waz.ZLog.ImplicitTag._
-import com.waz.model.{MessageContent, MessageData}
+import com.waz.model.{MessageContent, MessageData, MessageId}
 import com.waz.service.messages.MessageAndLikes
 import com.waz.threading.Threading
+import com.waz.utils.events.{EventContext, Signal}
 import com.waz.zclient.messages.MessageView.MsgBindOptions
+import com.waz.zclient.messages.parts.footer.FooterPartView.HideAnimator
 import com.waz.zclient.messages.{MessageViewPart, MsgPart}
 import com.waz.zclient.ui.utils.TextViewUtils
 import com.waz.zclient.utils.ContextUtils._
@@ -46,12 +54,71 @@ class FooterPartView(context: Context, attrs: AttributeSet, style: Int) extends 
   val isLiked = controller.isLiked
   val focused = controller.focused
 
-  val height = getDimen(R.dimen.content__footer__height).toInt
+  val height = Signal[Int]()
+  val contentOffset = Signal[Float]()
+  val contentTranslate = for {
+    h <- height
+    o <- contentOffset
+  } yield h * o
+
+  val closing = Signal(false)
+  val switchOffset = Signal(0f)
+
+  private var lastSwitchTranslate = 0
+  val switchTranslate = for {
+    h <- height
+    c <- closing
+    o <- switchOffset
+  } yield {
+    if (c) lastSwitchTranslate // disable switch if footer is closing now
+    else {
+      lastSwitchTranslate = (h * o).toInt
+      lastSwitchTranslate
+    }
+  }
+
+  val likesVisible = switchOffset.map(_ > .01f)
+  val statusVisible = switchOffset.map(_ < .99f)
+
+  val statusTranslate = for {
+    t <- contentTranslate
+    s <- switchTranslate
+  } yield t - s
+
+  val likesTranslate = statusTranslate map { _ + getHeight }
+
+  val contentAnim = new ValueAnimator() {
+    setFloatValues(0f, 1f)
+    addUpdateListener(new AnimatorUpdateListener {
+      override def onAnimationUpdate(animation: ValueAnimator) =
+        contentOffset ! animation.getAnimatedFraction - 1.0f
+    })
+  }
+
+  val switchAnim = new ValueAnimator() {
+    setFloatValues(0f, 1f)
+    addUpdateListener(new AnimatorUpdateListener {
+      override def onAnimationUpdate(animation: ValueAnimator) =
+        switchOffset ! animation.getAnimatedValue.asInstanceOf[Float]
+    })
+  }
+
+  val hideAnim = new HideAnimator(this)
 
   private val likeButton: LikeButton = findById(R.id.like__button)
   private val timeStampAndStatus: TextView = findById(R.id.timestamp_and_status)
-
   private val likeDetails: LikeDetailsView = findById(R.id.like_details)
+
+  setClipChildren(true)
+  height { h =>
+    setClipBounds(new Rect(0, 0, getWidth, h))
+  }
+
+  contentTranslate { likeButton.setTranslationY }
+  likesTranslate { likeDetails.setTranslationY }
+  statusTranslate { timeStampAndStatus.setTranslationY }
+  likesVisible { likeDetails.setVisible }
+  statusVisible { timeStampAndStatus.setVisible }
 
   likeButton.init(controller)
   likeDetails.init(controller)
@@ -65,15 +132,87 @@ class FooterPartView(context: Context, attrs: AttributeSet, style: Int) extends 
     }
   }
 
+  private var lastShow = false
+  private var lastMsgId = MessageId()
   controller.showTimestamp.on(Threading.Ui) { st =>
-    timeStampAndStatus.setVisible(st)  // TODO: translate animation
-    likeDetails.setVisible(!st)
+    switchAnim.cancel()
+
+    val msgId = message.currentValue.fold(lastMsgId)(_.id)
+    val animate = lastMsgId == msgId && lastShow != st
+    if (animate) {
+      val current = switchOffset.currentValue.getOrElse(0f)
+      if (st) switchAnim.setFloatValues(current, 0)
+      else switchAnim.setFloatValues(current, 1)
+      switchAnim.start()
+    } else {
+      switchOffset ! (if (st) 0 else 1)
+    }
+
+    lastShow = st
+    lastMsgId = msgId
+  }
+
+  override def onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int): Unit = {
+    super.onLayout(changed, left, top, right, bottom)
+    height ! (bottom - top)
   }
 
   override def set(msg: MessageData, part: Option[MessageContent], opts: MsgBindOptions): Unit = ()
 
   override def set(msg: MessageAndLikes, part: Option[MessageContent], opts: MsgBindOptions): Unit = {
-    controller.isSelfMessage.publish(opts.isSelf, Threading.Ui)
+    hideAnim.cancel()
+    contentAnim.cancel()
+    contentOffset ! 0
+    hideAnim.size ! 1f
+    closing ! false
+
+    controller.opts.publish(opts, Threading.Ui)
     controller.messageAndLikes.publish(msg, Threading.Ui)
+  }
+
+  def slideContentIn(): Unit = contentAnim.start()
+
+  def slideContentOut(): Unit = hideAnim.start()
+}
+
+object FooterPartView {
+
+  /**
+    * Animates footer size to hide it.
+    * Note: this animator changes view layout params, this is ugly, inefficient, causes layout pass on every frame,
+    * but I could't find any better way to achieve desired result in RecyclerView.
+    */
+  class HideAnimator(footer: FooterPartView)(implicit context: Context, ec: EventContext) extends ValueAnimator with AnimatorListener with AnimatorUpdateListener {
+    setFloatValues(0f, 1f)
+    addListener(this)
+    addUpdateListener(this)
+
+    val expandedHeight = getDimenPx(R.dimen.content__footer__height)
+
+    val size = Signal(1f)
+    val lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, expandedHeight)
+
+    size .map { s => (expandedHeight * s).toInt } { h =>
+      lp.height = h
+      footer.setLayoutParams(lp)
+    }
+
+    override def onAnimationUpdate(animation: ValueAnimator): Unit =
+      size ! (1f - animation.getAnimatedFraction)
+
+    override def onAnimationStart(animation: Animator): Unit = {
+      footer.closing ! true
+      footer.setVisibility(View.VISIBLE)
+    }
+
+    override def onAnimationEnd(animation: Animator): Unit = {
+      footer.closing ! false
+      size ! 1f
+      footer.setVisibility(View.GONE)
+    }
+
+    override def onAnimationRepeat(animation: Animator): Unit = ()
+
+    override def onAnimationCancel(animation: Animator): Unit = ()
   }
 }
