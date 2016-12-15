@@ -173,8 +173,8 @@
         <item quantity="one">%1$d person in common</item>
         <item quantity="other">%1$d people in common</item>
     </plurals>
-    <string name="people_picker__contact_list_contact_sub_label_address_book">%1$s in Address Book</string>
-    <string name="people_picker__contact_list_contact_sub_label_address_book_identical">in Address Book</string>
+    <string name="people_picker__contact_list_contact_sub_label_address_book">%1$s in Contacts</string>
+    <string name="people_picker__contact_list_contact_sub_label_address_book_identical">in Contacts</string>
 
     <!-- Conversation: Quick menu -->
     <string name="conversation_quick_menu__conversation_button__single_label">OPEN</string>
@@ -321,7 +321,7 @@
     <string name="connect_request__ignore_button__text">Ignore</string>
     <string name="content__message__connect_request__footer">CONNECTED</string>
     <string name="content__message__connect_request__auto_connect__footer">AUTO-CONNECTED. _LEARN MORE_</string>
-    <string name="content__message__connect_request__user_info">%1$s in Address Book</string>
+    <string name="content__message__connect_request__user_info">%1$s in Contacts</string>
 
 
     <!-- In-App Notifications -->
@@ -941,7 +941,7 @@
     <string name="advanced_image_download_wifi_info">The picture will appear when you \n are on WI-FI again</string>
     <string name="change_settings">Change Settings</string>
     <string name="single_image__save_to_disk__error">Unable to save image, no access to external storage</string>
-    <string name="conversation_list__label_action__contacts">CONTACTS</string>
+    <string name="conversation_list__label_action__contacts">PEOPLE</string>
     <string name="conversation_list__hint_header">Conversations start here</string>
     <string name="conversation_list__hint_text">Start a conversation or invite more people to join. Call, message and share in private or with groups.</string>
     <string name="conversation_list__action_join_call">JOIN</string>
