@@ -17,9 +17,11 @@
  */
 package com.waz.zclient.messages
 
+import java.util
+
 import android.content.Context
-import android.support.v7.widget.RecyclerView.OnScrollListener
-import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
+import android.support.v7.widget.RecyclerView.{OnScrollListener, ViewHolder}
+import android.support.v7.widget.{DefaultItemAnimator, LinearLayoutManager, RecyclerView}
 import android.util.AttributeSet
 import com.waz.ZLog.ImplicitTag._
 import com.waz.ZLog._
@@ -28,7 +30,6 @@ import com.waz.service.messages.MessageAndLikes
 import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
 import com.waz.zclient.controllers.global.SelectionController
-import com.waz.zclient.messages.ItemChangeAnimator.ChangeInfo
 import com.waz.zclient.messages.MessageView.MsgBindOptions
 import com.waz.zclient.messages.ScrollController.Scroll
 import com.waz.zclient.{Injectable, Injector, ViewHelper}
@@ -41,14 +42,19 @@ class MessagesListView(context: Context, attrs: AttributeSet, style: Int) extend
 
   val width = Signal[Int]()
   val height = Signal[Int]()
-  val layoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+  val layoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false) {
+    override def supportsPredictiveItemAnimations(): Boolean = true
+  }
   val adapter = new MessagesListAdapter(width)
   val scrollController = new ScrollController(adapter, height)
 
   setHasFixedSize(true)
   setLayoutManager(layoutManager)
   setAdapter(adapter)
-//  setItemAnimator(new ItemChangeAnimator)
+  setItemAnimator(new DefaultItemAnimator {
+    // always reuse view holder, we will handle animations ourselves
+    override def canReuseUpdatedViewHolder(viewHolder: ViewHolder, payloads: util.List[AnyRef]): Boolean = true
+  })
 
   scrollController.onScroll { case Scroll(pos, smooth) =>
     verbose(s"Scrolling to pos: $pos, smooth: $smooth")
@@ -105,24 +111,24 @@ case class MessageViewHolder(view: MessageView, adapter: MessagesListAdapter)(im
   private var _isFocused = false
 
   selection.focused.onChanged.on(Threading.Ui) { f =>
-    if (_isFocused != f.exists(_._1 == id)) adapter.notifyItemChanged(getAdapterPosition, ChangeInfo.Focus)
+    if (_isFocused != f.exists(_._1 == id)) adapter.notifyItemChanged(getAdapterPosition)
   }
 
   msgsController.lastSelfMessage.onChanged.on(Threading.Ui) { m =>
     opts foreach { o =>
-      if (o.isLastSelf != (m.id == id)) adapter.notifyItemChanged(getAdapterPosition, ChangeInfo.Unknown)
+      if (o.isLastSelf != (m.id == id)) adapter.notifyItemChanged(getAdapterPosition)
     }
   }
 
   msgsController.lastMessage.onChanged.on(Threading.Ui) { m =>
     opts foreach { o =>
-      if (o.isLast != (m.id == id)) adapter.notifyItemChanged(getAdapterPosition, ChangeInfo.Unknown)
+      if (o.isLast != (m.id == id)) adapter.notifyItemChanged(getAdapterPosition)
     }
   }
 
   def isFocused = _isFocused
 
-  def bind(msg: MessageAndLikes, prev: Option[MessageData], opts: MsgBindOptions, change: ChangeInfo): Unit = {
+  def bind(msg: MessageAndLikes, prev: Option[MessageData], opts: MsgBindOptions): Unit = {
     view.set(msg, prev, opts)
     id = msg.message.id
     this.opts = Some(opts)

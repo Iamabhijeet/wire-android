@@ -23,12 +23,14 @@ import android.view.{HapticFeedbackConstants, ViewGroup}
 import com.waz.ZLog.ImplicitTag._
 import com.waz.api.Message
 import com.waz.model.ConversationData.ConversationType
-import com.waz.model.{MessageContent, MessageData, MessageId}
+import com.waz.model.{MessageData, MessageId}
 import com.waz.service.messages.MessageAndLikes
 import com.waz.utils.RichOption
 import com.waz.zclient.controllers.global.SelectionController
+import com.waz.zclient.messages.MessageViewLayout.PartDesc
 import com.waz.zclient.messages.MsgPart._
 import com.waz.zclient.messages.controllers.MessageActionsController
+import com.waz.zclient.messages.parts.footer.FooterPartView
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.DateConvertUtils.asZonedDateTime
 import com.waz.zclient.utils._
@@ -51,8 +53,13 @@ class MessageView(context: Context, attrs: AttributeSet, style: Int)
   private var msg: MessageData = MessageData.Empty
   private var data: MessageAndLikes = MessageAndLikes.Empty
 
+  private var hasFooter = false
+
+  setClipChildren(false)
+  setClipToPadding(false)
+
   this.onClick {
-    selection.setFocused(msgId)
+    selection.toggleFocused(msgId)
   }
 
   this.onLongClick {
@@ -61,43 +68,57 @@ class MessageView(context: Context, attrs: AttributeSet, style: Int)
   }
 
   def set(mAndL: MessageAndLikes, prev: Option[MessageData], opts: MsgBindOptions): Unit = {
+    val animateFooter = msgId == mAndL.message.id && hasFooter != shouldShowFooter(mAndL, opts)
+    hasFooter = shouldShowFooter(mAndL, opts)
     data = mAndL
     msg = mAndL.message
     msgId = msg.id
 
     val contentParts = {
-      if (msg.msgType != Message.Type.RICH_MEDIA) Seq(MsgPart(msg.msgType) -> None)
-      else msg.content map { content => MsgPart(content.tpe) -> Some(content) }
-    } .filter(_ != MsgPart.Empty)
+      if (msg.msgType != Message.Type.RICH_MEDIA) Seq(PartDesc(MsgPart(msg.msgType)))
+      else msg.content map { content => PartDesc(MsgPart(content.tpe), Some(content)) }
+    } .filter(_.tpe != MsgPart.Empty)
 
     val parts =
-      if (!BuildConfig.DEBUG && contentParts.forall(_._1 == MsgPart.Unknown)) Nil // don't display anything for unknown message
+      if (!BuildConfig.DEBUG && contentParts.forall(_.tpe == MsgPart.Unknown)) Nil // don't display anything for unknown message
       else {
-        val builder = Seq.newBuilder[(MsgPart, Option[MessageContent])]
+        val builder = Seq.newBuilder[PartDesc]
 
-        getSeparatorType(msg, prev, opts.isFirstUnread).foreach(sep => builder += sep -> None)
+        getSeparatorType(msg, prev, opts.isFirstUnread).foreach(sep => builder += PartDesc(sep))
 
         if (shouldShowChathead(msg, prev))
-          builder += MsgPart.User -> None
+          builder += PartDesc(MsgPart.User)
 
         if (shouldShowInviteBanner(msg, opts)) {
-          builder += MsgPart.InviteBanner -> None
+          builder += PartDesc(MsgPart.InviteBanner)
         }
         builder ++= contentParts
 
         if (msg.isEphemeral) {
-          builder += MsgPart.EphemeralDots -> None
+          builder += PartDesc(MsgPart.EphemeralDots)
         }
 
-        if (shouldShowFooter(mAndL, opts)) // TODO need to trigger open animation if liked
-          builder += MsgPart.Footer -> None
+        if (hasFooter || animateFooter)
+          builder += PartDesc(MsgPart.Footer)
 
         builder.result()
       }
 
-    if (parts.nonEmpty) this.setMarginTop(getTopMargin(prev.map(_.msgType), parts.head._1))
+    // don't use margin on message view for spacing, this produces gaps ignoring click events, also margin change forces layout requests
+    // TODO: this should be split between this and previous view
+    // TODO: last view should have bottom padding to avoid overlaps with cursor
+    val pad = if (parts.isEmpty) 0 else getTopMargin(prev.map(_.msgType), parts.head.tpe)
+    setPadding(0, pad, 0, 0)
     setParts(mAndL, parts, opts)
+
+    if (animateFooter)
+      getFooter foreach { footer =>
+        if (hasFooter) footer.slideContentIn()
+        else footer.slideContentOut()
+      }
   }
+
+  def isFooterHiding = !hasFooter && getFooter.isDefined
 
   private def getSeparatorType(msg: MessageData, prev: Option[MessageData], isFirstUnread: Boolean): Option[MsgPart] = msg.msgType match {
     case Message.Type.CONNECT_REQUEST => None
@@ -126,6 +147,8 @@ class MessageView(context: Context, attrs: AttributeSet, style: Int)
 
   private def shouldShowFooter(mAndL: MessageAndLikes, opts: MsgBindOptions): Boolean =
     mAndL.likes.nonEmpty || selection.lastFocused.contains(mAndL.message.id) || opts.isLastSelf
+
+  def getFooter = listParts.lastOption.collect { case footer: FooterPartView => footer }
 }
 
 object MessageView {

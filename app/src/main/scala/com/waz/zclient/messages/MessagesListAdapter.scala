@@ -28,7 +28,6 @@ import com.waz.service.ZMessaging
 import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
 import com.waz.zclient.controllers.global.SelectionController
-import com.waz.zclient.messages.ItemChangeAnimator.ChangeInfo
 import com.waz.zclient.messages.MessageView.MsgBindOptions
 import com.waz.zclient.messages.MessagesListView.UnreadIndex
 import com.waz.zclient.messages.RecyclerCursor.RecyclerNotifier
@@ -97,15 +96,8 @@ class MessagesListAdapter(listWidth: Signal[Int])(implicit inj: Injector, ec: Ev
     val isLastSelf = listController.isLastSelf(data.message.id)
     val opts = MsgBindOptions(pos, isSelf, isLast, isLastSelf, isFirstUnread = isFirstUnread, listWidth.currentValue.getOrElse(0), convType)
 
-    holder.bind(data, if (pos == 0) None else Some(message(pos - 1).message), opts, changeInfo(payloads))
+    holder.bind(data, if (pos == 0) None else Some(message(pos - 1).message), opts)
   }
-
-  private def changeInfo(payloads: util.List[AnyRef]) =
-    if (payloads.size() != 1) ChangeInfo.Unknown // we only handle single partial change, will default to full restart otherwise
-    else payloads.get(0) match {
-      case ci: ChangeInfo => ci
-      case _ => ChangeInfo.Unknown
-    }
 
   override def onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder =
     MessageViewHolder(MessageView(parent, viewType), adapter)
@@ -134,8 +126,8 @@ class MessagesListAdapter(listWidth: Signal[Int])(implicit inj: Injector, ec: Ev
     override def notifyItemRemoved(pos: Int) =
       notifyItemRangeRemoved(pos, 1)
 
-    override def notifyItemChanged(pos: Int, info: ChangeInfo = ChangeInfo.Unknown) =
-      adapter.notifyItemChanged(pos, info)
+    override def notifyItemChanged(pos: Int) =
+      adapter.notifyItemChanged(pos)
 
     override def notifyItemRangeRemoved(pos: Int, count: Int) = {
       adapter.notifyItemRangeRemoved(pos, count)
