@@ -18,10 +18,14 @@
 package com.waz.zclient.calling.controllers
 
 import _root_.com.waz.api.VoiceChannelState._
-import _root_.com.waz.model.VoiceChannelData
+import _root_.com.waz.model.{ConvId, VoiceChannelData}
 import _root_.com.waz.service.ZMessaging
 import _root_.com.waz.utils.events.{EventContext, Signal}
 import android.os.PowerManager
+import com.waz.ZLog.ImplicitTag._
+import com.waz.ZLog._
+import com.waz.service.call.CallingService.NoCall
+import com.waz.service.call.{CallingService, CallingState}
 import com.waz.threading.Threading
 import com.waz.zclient.calling.CallingActivity
 import com.waz.zclient.{Injectable, Injector, WireContext}
@@ -31,6 +35,9 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
   implicit val eventContext = cxt.eventContext
 
   val zms = inject[Signal[Option[ZMessaging]]]
+  val prefs = zms.map(_.map(_.prefs))
+
+  val v3Service = zms.map(_.map(_.calling))
 
   private val screenManager = new ScreenManager
 
@@ -43,9 +50,25 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
 
   val voiceService = zms map (_.map(_.voice))
 
+  val v3Call = v3Service.flatMap {
+    case Some(svc) => svc.currentCall
+    case None => Signal.const(NoCall)
+  }
+
+  val isV3CallActive = v3Call.map(_.state != CallingState.Idle)
+
+  //true if incoming v3 call or outgoing pref is set
+  val isV3Call = prefs.zip(isV3CallActive).map {
+    case (Some(prefs), v3active) => v3active || prefs.callingV3
+    case _ => false
+  }
+
   //Note, we can't rely on the channels from ongoingAndTopIncoming directly, as they only update the presence of a channel, not their internal state
-  val convId = channels map {
-    case (ongoing, incoming) => ongoing.orElse(incoming).map(_.id)
+  val convId = isV3Call flatMap {
+    case true => v3Call.map(_.convId)
+    case false => channels map {
+      case (ongoing, incoming) => ongoing.orElse(incoming).map(_.id)
+    }
   }
 
   val currentChannel: Signal[Option[VoiceChannelData]] = voiceService.zip(convId) flatMap {
@@ -58,9 +81,12 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
     case _ => None
   }
 
-  val videoCall = currentChannel flatMap  {
-    case (Some(data)) => Signal.const(data.video.isVideoCall)
-    case _ => Signal.empty[Boolean] //empty signal to prevent 'empty' UI state on call tear-down
+  val videoCall = isV3Call.flatMap {
+    case true => v3Call.map(_.withVideo)
+    case _ => currentChannel flatMap  {
+      case (Some(data)) => Signal.const(data.video.isVideoCall)
+      case _ => Signal.empty[Boolean] //empty signal to prevent 'empty' UI state on call tear-down
+    }
   }
 
   val callState = currentChannel map {
@@ -68,9 +94,12 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
     case _ => None
   }
 
-  val activeCall = callState.map {
-    case Some(SELF_CALLING | SELF_JOINING | SELF_CONNECTED | OTHER_CALLING | OTHERS_CONNECTED) => true
-    case _ => false
+  val activeCall = isV3Call.flatMap {
+    case true => isV3CallActive
+    case _ => callState.map {
+      case Some(SELF_CALLING | SELF_JOINING | SELF_CONNECTED | OTHER_CALLING | OTHERS_CONNECTED) => true
+      case _ => true
+    }
   }
 
   var wasUiActiveOnCallStart = false
@@ -109,7 +138,7 @@ private class ScreenManager(implicit injector: Injector) extends Injectable {
   def setStayAwake() = {
     (stayAwake, wakeLock) match {
       case (_, None) | (false, Some(_)) =>
-        this.stayAwake = true;
+        this.stayAwake = true
         createWakeLock();
       case _ => //already set
     }
@@ -118,18 +147,18 @@ private class ScreenManager(implicit injector: Injector) extends Injectable {
   def setProximitySensorEnabled() = {
     (stayAwake, wakeLock) match {
       case (_, None) | (true, Some(_)) =>
-        this.stayAwake = false;
+        this.stayAwake = false
         createWakeLock();
       case _ => //already set
     }
   }
 
   private def createWakeLock() = {
-    var flags = if (stayAwake)
+    val flags = if (stayAwake)
       PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP
-    else PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK;
-    releaseWakeLock();
-    wakeLock = powerManager.map(_.newWakeLock(flags, TAG));
+    else PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK
+    releaseWakeLock()
+    wakeLock = powerManager.map(_.newWakeLock(flags, TAG))
     wakeLock.foreach(_.acquire())
   }
 
