@@ -24,8 +24,7 @@ import _root_.com.waz.utils.events.{EventContext, Signal}
 import android.os.PowerManager
 import com.waz.ZLog.ImplicitTag._
 import com.waz.ZLog._
-import com.waz.service.call.CallingService.NoCall
-import com.waz.service.call.{CallingService, CallingState}
+import com.waz.service.call.CallInfo._
 import com.waz.threading.Threading
 import com.waz.zclient.calling.CallingActivity
 import com.waz.zclient.{Injectable, Injector, WireContext}
@@ -55,7 +54,7 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
     case None => Signal.const(NoCall)
   }
 
-  val isV3CallActive = v3Call.map(_.state != CallingState.Idle)
+  val isV3CallActive = v3Call.map(_.state != Idle)
 
   //true if incoming v3 call or outgoing pref is set
   val isV3Call = prefs.zip(isV3CallActive).map {

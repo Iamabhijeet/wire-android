@@ -28,18 +28,17 @@ import com.waz.api._
 import com.waz.avs.{VideoPreview, VideoRenderer}
 import com.waz.model.VoiceChannelData.ConnectionState
 import com.waz.model._
+import com.waz.service.call.CallInfo.{Incoming, Ongoing, Outgoing}
 import com.waz.service.call.CallingService
-import com.waz.service.call.CallingService.CallInfo
-import com.waz.service.call.CallingState._
 import com.waz.service.call.FlowManagerService.{StateAndReason, UnknownState}
 import com.waz.threading.Threading
 import com.waz.utils._
 import com.waz.utils.events.{ClockSignal, Signal}
 import com.waz.zclient._
 import com.waz.zclient.utils.events.ButtonSignal
-import org.threeten.bp.{Duration, Instant}
 import org.threeten.bp.Duration._
 import org.threeten.bp.Instant._
+import org.threeten.bp.{Duration, Instant}
 
 class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends Injectable { self =>
 
@@ -149,10 +148,12 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val callerId = isV3Call.flatMap {
-    case true => v3Call flatMap {
-      case CallInfo(_, _, _, Outgoing, _) => selfUser.map(_.id)
-      case CallInfo(_, others, _, Incoming, _) if others.size == 1 => Signal.const(others.head)
-      case _ => Signal.empty[UserId] //TODO Dean do I need this information for other call states?
+    case true => v3Call flatMap { case info =>
+      (info.others, info.state) match {
+        case (_, Outgoing) => selfUser.map(_.id)
+        case (others, Incoming) if others.size == 1 => Signal.const(others.head)
+        case _ => Signal.empty[UserId] //TODO Dean do I need this information for other call states?
+      }
     }
     case _ => currentChannel map (_.caller) flatMap (_.fold(Signal.empty[UserId])(Signal(_)))
   }
@@ -175,13 +176,15 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val subtitleText = isV3Call.flatMap {
-    case true => v3Call.flatMap {
-      case CallInfo(_, _, true,  Outgoing, _) => Signal.const(cxt.getString(R.string.calling__header__outgoing_video_subtitle))
-      case CallInfo(_, _, false, Outgoing, _) => Signal.const(cxt.getString(R.string.calling__header__outgoing_subtitle))
-      case CallInfo(_, _, true,  Incoming, _) => Signal.const(cxt.getString(R.string.calling__header__incoming_subtitle__video))
-      case CallInfo(_, _, false, Incoming, _) => Signal.const(cxt.getString(R.string.calling__header__incoming_subtitle))
-      case CallInfo(_, _, _,     Ongoing,  _) => duration
-      case _ => Signal.const("")
+    case true => v3Call.flatMap { case info =>
+      (info.withVideo, info.state) match {
+        case (true,  Outgoing) => Signal.const(cxt.getString(R.string.calling__header__outgoing_video_subtitle))
+        case (false, Outgoing) => Signal.const(cxt.getString(R.string.calling__header__outgoing_subtitle))
+        case (true,  Incoming) => Signal.const(cxt.getString(R.string.calling__header__incoming_subtitle__video))
+        case (false, Incoming) => Signal.const(cxt.getString(R.string.calling__header__incoming_subtitle))
+        case (_,     Ongoing)  => duration
+        case _                 => Signal.const("")
+      }
     }
     case _ => Signal(outgoingCall, videoCall, callState, duration) map {
       case (true, true, SELF_CALLING, _) => cxt.getString(R.string.calling__header__outgoing_video_subtitle)
