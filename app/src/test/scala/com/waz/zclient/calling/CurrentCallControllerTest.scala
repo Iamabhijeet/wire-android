@@ -78,6 +78,11 @@ class CurrentCallControllerTest extends JUnitSuite {
 
   lazy val mockVoiceChannelService = mock(classOf[VoiceChannelService])
 
+  lazy val callExists = controller.globController.channels map {
+    case (None, None) => false
+    case _ => true
+  }
+
   @Before
   def setup(): Unit = {
     zMessaging = new MockZMessaging(selfUserId = selfUser.id) {
@@ -108,14 +113,14 @@ class CurrentCallControllerTest extends JUnitSuite {
 
   @Test
   def callExistsForOngoingChannel(): Unit = {
-    signalTest(controller.globController.callExists)(_ == true) {
+    signalTest(callExists)(_ == true) {
       pushChannel(OngoingAudioCall(oneToOneConv))
     }
   }
 
   @Test
   def callDoesNotExistForNoChannels(): Unit = {
-    signalTest(controller.globController.callExists)(_ == false) {
+    signalTest(callExists)(_ == false) {
       pushChannel(null)
     }
   }

@@ -29,7 +29,7 @@ import com.waz.avs.{VideoPreview, VideoRenderer}
 import com.waz.model.VoiceChannelData.ConnectionState
 import com.waz.model._
 import com.waz.service.call.CallInfo.{Incoming, Ongoing, Outgoing}
-import com.waz.service.call.CallingService
+import com.waz.service.call.{CallInfo, CallingService}
 import com.waz.service.call.FlowManagerService.{StateAndReason, UnknownState}
 import com.waz.threading.Threading
 import com.waz.utils._
@@ -42,12 +42,11 @@ import org.threeten.bp.{Duration, Instant}
 
 class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends Injectable { self =>
 
-
   val globController = inject[GlobalCallingController]
 
   implicit val eventContext = cxt.eventContext
 
-  val zms = globController.zms.collect { case Some(zms) => zms }
+  val zms = globController.zmsOpt.collect { case Some(zms) => zms }
 
   val v3service = globController.v3Service.collect { case Some(s) => s }
 
@@ -96,18 +95,16 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     case _ => currentChannel map (_.tracking.kindOfCall == KindOfCall.GROUP)
   }
 
-  val silenced = isV3Call.flatMap {
-    case true => Signal.const(false)
-    case _ => currentChannel map (_.silenced)
-  }
-
   val muted = isV3Call.flatMap {
-    case true => Signal.const(false)
+    case true => v3Call.map(_.muted)
     case _ => currentChannel map (_.muted)
   }
 
   val videoSendState = isV3Call.flatMap {
-    case true => Signal.const(VideoSendState.DONT_SEND)
+    case true => v3Call.map(_.receivingVideo).map {
+      case CallInfo.VideoSendState.Started => VideoSendState.SEND
+      case _ => VideoSendState.DONT_SEND
+    }
     case _ => currentChannel map (_.video.videoSendState)
   }
 
@@ -203,7 +200,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val otherSendingVideo = isV3Call.flatMap {
-    case true => v3Call.map(_.withVideo) //TODO...need to check this signalling better
+    case true => v3Call.map(_.receivingVideo == CallInfo.VideoSendState.Started)
     case _ => otherParticipants map {
       case Vector(other) => other.sendsVideo
       case _ => false
@@ -215,16 +212,32 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   val avsStateAndChangeReason = flowManager.flatMap(_.stateOfReceivedVideo)
   val cameraFailed = flowManager.flatMap(_.cameraFailedSig)
 
-  val stateMessageText = Signal(callState, cameraFailed, avsStateAndChangeReason, conversationName, otherSendingVideo) map { values =>
-    verbose(s"(callState, avsStateAndChangeReason, conversationName, otherSending): $values")
-    values match {
-      case (SELF_CALLING, true, _, _, _)                                                                      => Option(cxt.getString(R.string.calling__self_preview_unavailable_long))
-      case (SELF_JOINING, _, _, _, _)                                                                         => Option(cxt.getString(R.string.ongoing__connecting))
-      case (SELF_CONNECTED, _, StateAndReason(AvsVideoState.STOPPED, AvsVideoReason.BAD_CONNECTION), _, true) => Option(cxt.getString(R.string.ongoing__poor_connection_message))
-      case (SELF_CONNECTED, _, _, otherUserName, false)                                                       => Option(cxt.getString(R.string.ongoing__other_turned_off_video, otherUserName))
-      case (SELF_CONNECTED, _, UnknownState, otherUserName, true)                                             => Option(cxt.getString(R.string.ongoing__other_unable_to_send_video, otherUserName))
-      case _ => None
+  //TODO Dean - could make this tidier
+  //A simple mapping for the different types of calling state
+  val stateMap = isV3Call.flatMap {
+    case true => v3Call.map(_.state).map {
+      case Outgoing => 1
+      case Ongoing => 3
+      case _ => 4
     }
+    case _ => callState.map {
+      case SELF_CALLING => 1
+      case SELF_JOINING => 2
+      case SELF_CONNECTED => 3
+      case _ => 4
+    }
+  }
+
+  val stateMessageText = Signal(stateMap, cameraFailed, avsStateAndChangeReason, conversationName, otherSendingVideo).map { values =>
+      verbose(s"$values")
+      values match {
+        case (1, true, _, _, _)                                                                    => Option(cxt.getString(R.string.calling__self_preview_unavailable_long))
+        case (2, _, _, _, _)                                                                       => Option(cxt.getString(R.string.ongoing__connecting))
+        case (3, _, StateAndReason(AvsVideoState.STOPPED, AvsVideoReason.BAD_CONNECTION), _, true) => Option(cxt.getString(R.string.ongoing__poor_connection_message))
+        case (3, _, _, otherUserName, false)                                                       => Option(cxt.getString(R.string.ongoing__other_turned_off_video, otherUserName))
+        case (3, _, UnknownState, otherUserName, true)                                             => Option(cxt.getString(R.string.ongoing__other_unable_to_send_video, otherUserName))
+        case _ => None
+      }
   }
 
   val participantIdsToDisplay = isV3Call.flatMap {
@@ -306,14 +319,22 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   def toggleMuted(): Unit = {
-    voiceServiceAndCurrentConvId.currentValue.foreach {
-      case (vcs, id) => if (muted.currentValue.getOrElse(false)) vcs.unmuteVoiceChannel(id) else vcs.muteVoiceChannel(id)
-    }
+    if (_isV3Call)
+      _v3ServiceAndCurrentConvId.foreach(_._1.setCallMuted(!muted.currentValue.getOrElse(false)))
+    else
+      voiceServiceAndCurrentConvId.currentValue.foreach {
+        case (vcs, id) => if (muted.currentValue.getOrElse(false)) vcs.unmuteVoiceChannel(id) else vcs.muteVoiceChannel(id)
+      }
   }
 
   def toggleVideo(): Unit = {
-    voiceServiceAndCurrentConvId.currentValue.foreach {
-      case (vcs, id) => vcs.setVideoSendState(id, if (videoSendState.currentValue.getOrElse(DONT_SEND) == SEND) DONT_SEND else SEND)
+    val state = videoSendState.currentValue.getOrElse(DONT_SEND)
+    if (_isV3Call)
+      _v3ServiceAndCurrentConvId.foreach {
+        case (s, cId) => s.setVideoSendActive(cId, if(state == SEND) false else true)
+      }
+    else voiceServiceAndCurrentConvId.currentValue.foreach {
+      case (vcs, id) => vcs.setVideoSendState(id, if (state == SEND) DONT_SEND else SEND)
     }
   }
 

@@ -39,7 +39,7 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
   val currentConvAndVoiceService = globController.voiceServiceAndCurrentConvId
   val videoCall = globController.videoCall
 
-  val zms = globController.zms.collect { case Some(v) => v }
+  val zms = globController.zmsOpt.collect { case Some(v) => v }
 
   val autoAnswerPreference = zms.flatMap(_.prefs.uiPreferenceBooleanSignal(cxt.getResources.getString(R.string.pref_dev_auto_answer_call_key)).signal)
 
