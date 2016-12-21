@@ -100,11 +100,11 @@ private class OutgoingControlsView(val context: Context, val attrs: AttributeSet
     callOnClick()
   }
   rightButton.onClick {
-    if (controller.videoCall.currentValue.getOrElse(false)) controller.toggleVideo() else controller.speakerButton.press()
+    if (controller.glob.videoCall.currentValue.getOrElse(false)) controller.toggleVideo() else controller.speakerButton.press()
     callOnClick()
   }
 
-  controller.videoCall.map {
+  controller.glob.videoCall.map {
     case true => (R.string.glyph__video, R.string.incoming__controls__ongoing__video)
     case false => (R.string.glyph__speaker_loud, R.string.incoming__controls__ongoing__speaker)
   }.on(Threading.Ui) {
@@ -120,7 +120,7 @@ private class OutgoingControlsView(val context: Context, val attrs: AttributeSet
 
   controller.muted.on(Threading.Ui)(leftButton.setButtonPressed)
 
-  Signal(controller.videoCall, controller.speakerButton, controller.videoSendState).map {
+  Signal(controller.glob.videoCall, controller.speakerButton, controller.videoSendState).map {
     case (true, _, videoSendState) => videoSendState == SEND
     case (false, speakerEnabled, _) => speakerEnabled
   }.on(Threading.Ui)(rightButton.setButtonPressed)
@@ -206,16 +206,16 @@ private class IncomingControlsView(val context: Context, val attrs: AttributeSet
 
   private var textRect = new Rect
 
-  private val allowClickOnActionButtons = callController.wasUiActiveOnCallStart
+  private val allowClickOnActionButtons = callController.glob.wasUiActiveOnCallStart
 
   setBackgroundColor(Color.TRANSPARENT)
 
-  val rightButtonGlyphSignal = callController.videoCall map {
+  val rightButtonGlyphSignal = callController.glob.videoCall map {
     case true => getResources.getString(R.string.glyph__video)
     case false => getResources.getString(R.string.glyph__call)
   }
 
-  val bitmapSignal = callController.zms.zip(callController.selfUser).flatMap {
+  val bitmapSignal = callController.glob.zms.zip(callController.glob.selfUser).flatMap {
     case (zms, selfUser) =>
       selfUser.picture.fold {
         Signal.const[Option[BitmapResult]](None)
@@ -230,9 +230,9 @@ private class IncomingControlsView(val context: Context, val attrs: AttributeSet
     case _ => None
   }
 
-  val userInitials = callController.selfUser.map(data => NameParts.parseFrom(data.name).initials)
+  val userInitials = callController.glob.selfUser.map(data => NameParts.parseFrom(data.name).initials)
 
-  val accentColor = callController.selfUser.map(data => AccentColor(data.accent).getColor())
+  val accentColor = callController.glob.selfUser.map(data => AccentColor(data.accent).getColor())
 
   Signal(rightButtonGlyphSignal, userInitials, accentColor, bitmapSignal).on(Threading.Ui) { _ =>
     invalidate()

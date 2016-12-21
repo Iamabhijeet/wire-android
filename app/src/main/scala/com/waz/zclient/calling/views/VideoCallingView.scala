@@ -87,7 +87,7 @@ class VideoCallingView(val context: Context, val attrs: AttributeSet, val defSty
 
   callingControls.onClickEvent.on(Threading.Ui)(_ => extendControlsDisplay())
 
-  controller.activeCall.map {
+  controller.glob.activeCall.map {
     case true => Some(videoPreview)
     case false => None
   }.on(Threading.Ui)(controller.setVideoPreview)
@@ -97,7 +97,7 @@ class VideoCallingView(val context: Context, val attrs: AttributeSet, val defSty
     case false => None
   }.on(Threading.Ui)(controller.setVideoView)
 
-  Signal(controller.activeCall, controller.callEstablished).on(Threading.Ui) {
+  Signal(controller.glob.activeCall, controller.callEstablished).on(Threading.Ui) {
     case (true, false) if !hasFullScreenBeenSet =>
       Timber.d("Attaching videoPreview to fullScreen (call active, but not established")
       setFullScreenView(videoPreview)

@@ -25,7 +25,6 @@ import com.waz.api.VoiceChannelState._
 import com.waz.api.{KindOfCall, VoiceChannelState}
 import com.waz.bitmap.BitmapUtils
 import com.waz.model.{AssetData, ConvId}
-import com.waz.service.ZMessaging
 import com.waz.service.assets.AssetService.BitmapResult
 import com.waz.service.assets.AssetService.BitmapResult.BitmapLoaded
 import com.waz.service.images.BitmapSignal
@@ -33,7 +32,7 @@ import com.waz.threading.Threading
 import com.waz.ui.MemoryImageCache.BitmapRequest.Regular
 import com.waz.utils.LoggedTry
 import com.waz.utils.events.Signal
-import com.waz.zclient.calling.controllers.GlobalCallingController
+import com.waz.zclient.calling.controllers.{CallStateMap, GlobalCallingController}
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.IntentUtils.getNotificationAppLaunchIntent
 import com.waz.zclient.{Injectable, Injector, R, WireContext}
@@ -50,31 +49,22 @@ class CallingNotificationsController(cxt: WireContext)(implicit inj: Injector) e
 
   val notificationManager = inject[NotificationManager]
 
-  val zms = inject[Signal[Option[ZMessaging]]].collect { case Some(z) => z }
-  val users = zms.map(_.usersStorage)
-  val convs = zms.map(_.convsStorage)
   val callCtrler = inject[GlobalCallingController]
+  import callCtrler._
 
-  callCtrler.currentChannel.on(Threading.Ui) {
-    case Some(data) if data.ongoing => notificationManager.cancel(ZETA_CALL_INCOMING_NOTIFICATION_ID)
-    case Some(data) if !data.ongoing => notificationManager.cancel(ZETA_CALL_ONGOING_NOTIFICATION_ID)
-    case None =>
+  (for {
+    active <- activeCall
+    state <- stateMap
+  } yield (active, state)).on(Threading.Ui) {
+    case (true, CallStateMap.IncomingCall) => notificationManager.cancel(ZETA_CALL_INCOMING_NOTIFICATION_ID)
+    case (true, _) => notificationManager.cancel(ZETA_CALL_ONGOING_NOTIFICATION_ID)
+    case (false, _) =>
       notificationManager.cancel(ZETA_CALL_ONGOING_NOTIFICATION_ID)
       notificationManager.cancel(ZETA_CALL_INCOMING_NOTIFICATION_ID)
   }
 
-  val currentChannel = callCtrler.currentChannel.collect { case Some(data) => data }
-
-  val caller = users.zip(currentChannel.map(_.caller).collect { case Some(id) => id }).flatMap {
-    case (users, id) => users.signal(id)
-  }
-
-  val conv = convs.zip(currentChannel.map(_.id)).flatMap {
-    case (convs, id) => convs.signal(id)
-  }
-
   //TODO use image controller when available from messages rewrite branch
-  val bitmap = zms.zip(caller.map(_.picture)).flatMap {
+  val bitmap = zms.zip(callerData.map(_.picture)).flatMap {
     case (zms, Some(imageId)) => zms.assetsStorage.signal(imageId).flatMap {
       case data @ AssetData.IsImage() => BitmapSignal(data, Regular(callImageSizePx), zms.imageLoader, zms.imageCache)
       case _ => Signal.empty[BitmapResult]
@@ -85,7 +75,7 @@ class CallingNotificationsController(cxt: WireContext)(implicit inj: Injector) e
     case _ => None
   }
 
-  Signal(conv.map(_.displayName), caller.map(_.name), currentChannel, bitmap).on(Threading.Ui) {
+  Signal(conversation.map(_.displayName), callerData.map(_.name), currentChannel, bitmap).on(Threading.Ui) {
     case (conv, caller, data, bitmap) =>
       val message = getCallStateMessage(data.state, data.video.isVideoCall)
       val title = if (data.tracking.kindOfCall == KindOfCall.GROUP) getString(R.string.system_notification__group_call_title, caller, conv) else conv

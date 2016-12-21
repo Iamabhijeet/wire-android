@@ -21,6 +21,8 @@ import _root_.com.waz.api.VoiceChannelState._
 import _root_.com.waz.service.ZMessaging
 import _root_.com.waz.utils.events.{EventContext, Signal}
 import android.os.PowerManager
+import com.waz.api.IConversation
+import com.waz.model.UserId
 import com.waz.service.call.CallInfo._
 import com.waz.threading.Threading
 import com.waz.zclient.calling.CallingActivity
@@ -28,10 +30,12 @@ import com.waz.zclient.{Injectable, Injector, WireContext}
 
 class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends Injectable {
 
-  implicit val eventContext = cxt.eventContext
+  private implicit val eventContext = cxt.eventContext
 
   val zmsOpt = inject[Signal[Option[ZMessaging]]]
+
   val zms = zmsOpt.collect { case Some(z) => z }
+  val userStorage = zms map (_.usersStorage)
 
   private val screenManager = new ScreenManager
 
@@ -62,7 +66,38 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
 
   //Note, we can't rely on the channels from ongoingAndTopIncoming directly, as they only update the presence of a channel, not their internal state
   val currentChannel = voiceServiceAndCurrentConvId.flatMap { case (vcs, id) => vcs.voiceChannelSignal(id) }
-  val callState = currentChannel.map(_.state)
+  val v2CallState = currentChannel.map(_.state)
+
+  //A simple mapping for the different types of calling state
+  val stateMap = isV3Call.flatMap {
+    case true => v3Call.map(_.state).map {
+      case Outgoing => CallStateMap.OutgoingCall
+      case Ongoing  => CallStateMap.ConnectedCall
+      case _        => CallStateMap.OtherCallState
+    }
+    case _ => v2CallState.map {
+      case SELF_CALLING   => CallStateMap.OutgoingCall
+      case SELF_JOINING   => CallStateMap.JoiningCall
+      case SELF_CONNECTED => CallStateMap.ConnectedCall
+      case _              => CallStateMap.OtherCallState
+    }
+  }
+
+  val conversation = zms.zip(convId) flatMap { case (zms, convId) => zms.convsStorage.signal(convId) }
+  val conversationName = conversation map (data => if (data.convType == IConversation.Type.GROUP) data.name.filter(!_.isEmpty).getOrElse(data.generatedName) else data.generatedName)
+
+  val selfUser = zms flatMap (_.users.selfUser)
+  val callerId = isV3Call.flatMap {
+    case true => v3Call flatMap { case info =>
+      (info.others, info.state) match {
+        case (_, Outgoing) => selfUser.map(_.id)
+        case (others, Incoming) if others.size == 1 => Signal.const(others.head)
+        case _ => Signal.empty[UserId] //TODO Dean do I need this information for other call states?
+      }
+    }
+    case _ => currentChannel map (_.caller) flatMap (_.fold(Signal.empty[UserId])(Signal(_)))
+  }
+  val callerData = userStorage.zip(callerId).flatMap { case (storage, id) => storage.signal(id) }
 
   val videoCall = isV3Call.flatMap {
     case true => v3Call.map(_.withVideo)
@@ -73,7 +108,7 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
   val activeCall = zmsOpt.flatMap {
     case Some(_) => isV3Call.flatMap {
       case true => isV3CallActive
-      case _ => callState.map {
+      case _ => v2CallState.map {
         case SELF_CALLING | SELF_JOINING | SELF_CONNECTED | OTHER_CALLING | OTHERS_CONNECTED => true
         case _ => false
       }
@@ -81,11 +116,13 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
     }
   }
 
-  var wasUiActiveOnCallStart = false
+  private var _wasUiActiveOnCallStart = false
+
+  def wasUiActiveOnCallStart = _wasUiActiveOnCallStart
 
   val onCallStarted = activeCall.onChanged.filter(_ == true).map { _ =>
     val active = zmsOpt.flatMap(_.fold(Signal.const(false))(_.lifecycle.uiActive)).currentValue.getOrElse(false)
-    wasUiActiveOnCallStart = active
+    _wasUiActiveOnCallStart = active
     active
   }
 
@@ -97,12 +134,27 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
     screenManager.releaseWakeLock()
   }(EventContext.Global)
 
-  videoCall.zip(callState) {
-    case (true, _) => screenManager.setStayAwake()
-    case (false, st) if st == OTHER_CALLING => screenManager.setStayAwake()
-    case (false, st) if st == SELF_CALLING | st == SELF_JOINING || st == SELF_CONNECTED => screenManager.setProximitySensorEnabled()
-    case _ => screenManager.releaseWakeLock()
+  (for {
+    v <- videoCall
+    st <- stateMap
+  } yield (v, st)) { v =>
+    import CallStateMap._
+    v match {
+      case (true, _) => screenManager.setStayAwake()
+      case (false, IncomingCall) => screenManager.setStayAwake()
+      case (false, OutgoingCall | JoiningCall | ConnectedCall) => screenManager.setProximitySensorEnabled()
+      case _ => screenManager.releaseWakeLock()
+    }
   }
+}
+
+object CallStateMap {
+  val OutgoingCall = 1
+  val IncomingCall = 2
+  val JoiningCall = 3
+  val ConnectedCall = 4
+  val OtherCallState = 5
+}
 
 private class ScreenManager(implicit injector: Injector) extends Injectable {
 

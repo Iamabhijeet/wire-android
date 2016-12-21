@@ -42,7 +42,7 @@ class HeaderLayoutAudio(val context: Context, val attrs: AttributeSet, val defSt
 
   controller.subtitleText.on(Threading.Ui)(subtitleView.setText)
 
-  controller.conversationName.on(Threading.Ui)(nameView.setText)
+  controller.glob.conversationName.on(Threading.Ui)(nameView.setText)
 }
 
 class HeaderLayoutVideo (val context: Context, val attrs: AttributeSet, val defStyleAttr: Int) extends LinearLayout(context, attrs, defStyleAttr) with ViewHelper {
@@ -64,5 +64,5 @@ class HeaderLayoutVideo (val context: Context, val attrs: AttributeSet, val defS
 
   controller.subtitleText.on(Threading.Ui)(subtitleView.setText)
 
-  controller.conversationName.on(Threading.Ui)(nameView.setText)
+  controller.glob.conversationName.on(Threading.Ui)(nameView.setText)
 }

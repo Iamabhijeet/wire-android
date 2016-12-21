@@ -42,14 +42,14 @@ class CallingActivity extends AppCompatActivity with ActivityHelper with Permiss
     super.onCreate(savedInstanceState)
     getWindow.setBackgroundDrawableResource(R.color.calling__ongoing__background__color)
 
-    controller.activeCall.on(Threading.Ui) {
+    controller.glob.activeCall.on(Threading.Ui) {
       case false =>
         Timber.d("call no longer exists, finishing activity")
         finish()
       case _ =>
     }
 
-    controller.videoCall.on(Threading.Ui) { isVideoCall =>
+    controller.glob.videoCall.on(Threading.Ui) { isVideoCall =>
       if (!isContentSet) {
         isVideoCall match {
           case true => setContentView(new VideoCallingView(this), new LayoutParams(MATCH_PARENT, MATCH_PARENT))
