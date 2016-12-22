@@ -25,7 +25,7 @@ import android.support.v4.content.ContextCompat
 import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.RecyclerView.ViewHolder
 import android.text.format.Formatter
-import android.util.TypedValue
+import android.util.AttributeSet
 import android.view.View.OnClickListener
 import android.view.ViewGroup.LayoutParams
 import android.view.{LayoutInflater, View, ViewGroup}
@@ -36,10 +36,9 @@ import com.waz.model.{AssetData, AssetId, MessageData}
 import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
 import com.waz.utils.returning
-import com.waz.zclient.conversation.CollectionAdapter.{CollViewHolder, FileViewHolder}
+import com.waz.zclient.conversation.CollectionAdapter.{CollViewHolder, CollectionHeaderLinearLayout, FileViewHolder}
 import com.waz.zclient.pages.main.conversation.views.AspectRatioImageView
 import com.waz.zclient.ui.drawable.FileDrawable
-import com.waz.zclient.ui.text.TypefaceTextView
 import com.waz.zclient.ui.utils.ResourceUtils
 import com.waz.zclient.utils.ViewUtils
 import com.waz.zclient.{Injectable, Injector, R}
@@ -94,6 +93,8 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
       case _ =>
     }
   }
+
+  var header: CollectionHeaderLinearLayout = null
 
   override def getItemCount: Int = {
     contentMode match {
@@ -222,23 +223,20 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
   }
 
   def getHeaderView(parent: RecyclerView, position: Int): View = {
-    val header = new LinearLayout(parent.getContext)
+    if (header == null) {
+      header = new CollectionHeaderLinearLayout(parent.getContext)
+    }
     if (header.getLayoutParams == null) {
       header.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
-    header.setBackgroundColor(ContextCompat.getColor(parent.getContext, R.color.light_graphite_24))
 
-    val textView = new TypefaceTextView(parent.getContext)
-    textView.setText(getHeaderText(getHeaderId(position)))
-    textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, context.getResources.getDimensionPixelSize(R.dimen.wire__text_size__small))
-    textView.setTypeface(context.getString(R.string.wire__typeface__bold))
-    val padding = parent.getContext.getResources.getDimensionPixelSize(R.dimen.wire__padding__small)
-    textView.setPadding(padding, padding, padding, padding)
-    header.addView(textView)
+    header.nameView.setText(getHeaderText(getHeaderId(position)))
 
+    val widthSpec: Int = View.MeasureSpec.makeMeasureSpec(parent.getWidth, View.MeasureSpec.UNSPECIFIED)
     val heightSpec: Int = View.MeasureSpec.makeMeasureSpec(parent.getHeight, View.MeasureSpec.EXACTLY)
+    val childWidth: Int = ViewGroup.getChildMeasureSpec(widthSpec, parent.getPaddingLeft + parent.getPaddingRight, header.getLayoutParams.width)
     val childHeight: Int = ViewGroup.getChildMeasureSpec(heightSpec, parent.getPaddingTop + parent.getPaddingBottom, header.getLayoutParams.height)
-    header.measure(LayoutParams.MATCH_PARENT, childHeight)
+    header.measure(childWidth, childHeight)
     header.layout(0, 0, parent.getMeasuredWidth, header.getMeasuredHeight)
     header
   }
@@ -275,6 +273,19 @@ object CollectionAdapter {
 
   val VIEW_TYPE_IMAGE = 0
   val VIEW_TYPE_FILE = 1
+
+  case class CollectionHeaderLinearLayout(context: Context, attrs: AttributeSet, defStyleAttr: Int) extends LinearLayout(context, attrs, defStyleAttr) {
+
+    def this(context: Context, attrs: AttributeSet) = this(context, attrs, 0)
+
+    def this(context: Context) =  this(context, null)
+
+    lazy val nameView: TextView = ViewUtils.getView(this, R.id.ttv__collection_header__name)
+
+    LayoutInflater.from(context).inflate(R.layout.row_collection_header, this, true)
+    setOrientation(LinearLayout.HORIZONTAL)
+    setBackgroundColor(ContextCompat.getColor(context, R.color.light_graphite_24))
+  }
 
   case class FileViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
     val actionButton: View = ViewUtils.getView(view, R.id.v__row_collection__file_icon)
