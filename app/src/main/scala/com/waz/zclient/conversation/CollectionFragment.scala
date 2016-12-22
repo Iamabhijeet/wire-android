@@ -21,9 +21,10 @@ import android.content.Context
 import android.os.Bundle
 import android.support.v7.widget.RecyclerView.AdapterDataObserver
 import android.support.v7.widget.{GridLayoutManager, LinearLayoutManager, RecyclerView, Toolbar}
-import android.view.View.OnClickListener
-import android.view.{LayoutInflater, View, ViewGroup}
+import android.view.View.{OnClickListener, OnTouchListener}
+import android.view.{LayoutInflater, MotionEvent, View, ViewGroup}
 import android.widget.TextView
+import com.waz.ZLog._
 import com.waz.threading.Threading
 import com.waz.zclient.pages.BaseFragment
 import com.waz.zclient.pages.main.conversation.collections.CollectionItemDecorator
@@ -33,6 +34,8 @@ import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 class CollectionFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener {
 
   private implicit lazy val context: Context = getContext
+
+  private implicit val tag: LogTag = logTagFor[CollectionFragment]
 
   lazy val controller = new CollectionController
   var adapter: CollectionAdapter = null
@@ -67,8 +70,21 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
         contentView.setText(contentId)
       }
     })
+    val collectionItemDecorator = new CollectionItemDecorator(adapter, columns)
     recyclerView.setAdapter(adapter)
-    recyclerView.addItemDecoration(new CollectionItemDecorator(adapter, columns))
+    recyclerView.setOnTouchListener(new OnTouchListener {
+      override def onTouch(v: View, event: MotionEvent): Boolean = {
+        event.getAction match {
+          case MotionEvent.ACTION_UP => {
+            val x = Math.round(event.getX)
+            val y = Math.round(event.getY)
+            adapter.onHeaderClicked(collectionItemDecorator.getHeaderClicked(x, y))
+          }
+          case _ => false;
+        }
+      }
+    })
+    recyclerView.addItemDecoration(collectionItemDecorator)
     val layoutManager = new GridLayoutManager(context, columns, LinearLayoutManager.VERTICAL, false)
     layoutManager.setSpanSizeLookup(new CollectionSpanSizeLookup(columns, adapter))
     recyclerView.setLayoutManager(layoutManager)

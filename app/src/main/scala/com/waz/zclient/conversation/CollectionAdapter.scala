@@ -134,24 +134,41 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
     }
   }
 
+  def onHeaderClicked(position: Int): Boolean = {
+    if (position < 0) {
+      false
+    } else {
+      val newMode = contentMode match {
+        case CollectionAdapter.VIEW_MODE_ALL => {
+          getHeaderId(position) match {
+            case Header.mainLinks => CollectionAdapter.VIEW_MODE_LINKS
+            case Header.mainImages => CollectionAdapter.VIEW_MODE_IMAGES
+            case Header.mainFiles => CollectionAdapter.VIEW_MODE_FILES
+          }
+        }
+        case _ => contentMode
+      }
+      if (newMode != contentMode) {
+        contentMode = newMode
+        notifyDataSetChanged()
+        true
+      } else {
+        false
+      }
+    }
+  }
 
   private def assetSignal(col: Seq[MessageData], pos: Int): Option[Signal[AssetData]] = col.lift(pos).map(m => ctrler.assetSignal(m.assetId))
 
   val imageListener = new OnClickListener {
     override def onClick(v: View): Unit = {
-      if (contentMode != CollectionAdapter.VIEW_MODE_IMAGES) {
-        contentMode = CollectionAdapter.VIEW_MODE_IMAGES
-        notifyDataSetChanged()
-      }
+      // TODO
     }
   }
 
   val fileListener = new OnClickListener {
     override def onClick(v: View): Unit = {
-      if (contentMode != CollectionAdapter.VIEW_MODE_FILES) {
-        contentMode = CollectionAdapter.VIEW_MODE_FILES
-        notifyDataSetChanged()
-      }
+      // TODO
     }
   }
 

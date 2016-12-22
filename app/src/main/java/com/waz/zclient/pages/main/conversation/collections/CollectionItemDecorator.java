@@ -23,13 +23,17 @@ import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import com.waz.zclient.conversation.CollectionAdapter;
 
+import java.util.HashMap;
+import java.util.Map;
 
 public class CollectionItemDecorator extends RecyclerView.ItemDecoration {
 
     private CollectionAdapter adapter;
     private int spanCount;
+    private Map<Integer, Rect> headerPositions;
 
     public CollectionItemDecorator(CollectionAdapter adapter, int spanCount) {
+        headerPositions = new HashMap<>();
         this.adapter = adapter;
         this.spanCount = spanCount;
     }
@@ -37,6 +41,7 @@ public class CollectionItemDecorator extends RecyclerView.ItemDecoration {
     @Override
     public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
         super.onDrawOver(c, parent, state);
+        headerPositions.clear();
         final int childCount = parent.getChildCount();
         if (childCount <= 0 || adapter.getItemCount() <= 0) {
             return;
@@ -62,8 +67,18 @@ public class CollectionItemDecorator extends RecyclerView.ItemDecoration {
                 }
                 drawHeader(c, header, tempRect);
                 highestTop = tempRect.top;
+                headerPositions.put(position, new Rect(tempRect));
             }
         }
+    }
+
+    public int getHeaderClicked(int x, int y) {
+        for (int position : headerPositions.keySet()) {
+            if (headerPositions.get(position).contains(x, y)) {
+                return position;
+            }
+        }
+        return -1;
     }
 
     @Override
