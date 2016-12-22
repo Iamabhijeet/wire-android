@@ -17,6 +17,7 @@
  */
 package com.waz.zclient.calling.controllers
 
+import com.waz.api.VoiceChannelState
 import com.waz.model.ConvId
 import com.waz.service.call.CallingService
 import com.waz.zclient._
@@ -38,8 +39,8 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
 
   val autoAnswerPreference = zms.flatMap(_.prefs.uiPreferenceBooleanSignal(cxt.getResources.getString(R.string.pref_dev_auto_answer_call_key)).signal)
 
-  val incomingCall = stateMap.map {
-    case CallStateMap.IncomingCall => true
+  val incomingCall = callState.map {
+    case VoiceChannelState.OTHER_CALLING => true
     case _ => false
   }
 

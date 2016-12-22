@@ -28,9 +28,8 @@ import com.waz.api._
 import com.waz.avs.{VideoPreview, VideoRenderer}
 import com.waz.model.VoiceChannelData.ConnectionState
 import com.waz.model._
-import com.waz.service.call.CallInfo.{Incoming, Ongoing, Outgoing}
-import com.waz.service.call.{CallInfo, CallingService}
 import com.waz.service.call.FlowManagerService.{StateAndReason, UnknownState}
+import com.waz.service.call.{CallInfo, CallingService}
 import com.waz.threading.Threading
 import com.waz.utils._
 import com.waz.utils.events.{ClockSignal, Signal}
@@ -59,16 +58,11 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   v3ServiceAndCurrentConvId(v => _v3ServiceAndCurrentConvId = Some(v))
 
   val showOngoingControls = isV3Call.flatMap {
-    case true => v3Call.map(_.state != Incoming)
+    case true => v3Call.map(_.state != OTHER_CALLING)
     case _ => v2CallState.flatMap {
       case OTHER_CALLING | OTHERS_CONNECTED | TRANSFER_CALLING | TRANSFER_READY => Signal(false)
       case _ => Signal(true)
     }
-  }
-
-  val groupCall = isV3Call.flatMap {
-    case true => Signal.const(false)
-    case _ => currentChannel map (_.tracking.kindOfCall == KindOfCall.GROUP)
   }
 
   val muted = isV3Call.flatMap {
@@ -116,7 +110,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   val onCallEstablished = callEstablished.onChanged
 
   val outgoingCall = isV3Call.flatMap {
-    case true => v3Call map (_.state == Outgoing)
+    case true => v3Call map (_.state == SELF_CALLING)
     case _ => currentChannel map (_.state == SELF_CALLING)
   }
 
@@ -135,26 +129,19 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     }
   }
 
-  val subtitleText = isV3Call.flatMap {
-    case true => v3Call.flatMap { case info =>
-      (info.withVideo, info.state) match {
-        case (true,  Outgoing) => Signal.const(cxt.getString(R.string.calling__header__outgoing_video_subtitle))
-        case (false, Outgoing) => Signal.const(cxt.getString(R.string.calling__header__outgoing_subtitle))
-        case (true,  Incoming) => Signal.const(cxt.getString(R.string.calling__header__incoming_subtitle__video))
-        case (false, Incoming) => Signal.const(cxt.getString(R.string.calling__header__incoming_subtitle))
-        case (_,     Ongoing)  => duration
-        case _                 => Signal.const("")
-      }
-    }
-    case _ => Signal(outgoingCall, videoCall, v2CallState, duration) map {
-      case (true, true, SELF_CALLING, _) => cxt.getString(R.string.calling__header__outgoing_video_subtitle)
-      case (true, false, SELF_CALLING, _) => cxt.getString(R.string.calling__header__outgoing_subtitle)
-      case (false, true, OTHER_CALLING, _) => cxt.getString(R.string.calling__header__incoming_subtitle__video)
-      case (false, false, OTHER_CALLING | OTHERS_CONNECTED, _) => cxt.getString(R.string.calling__header__incoming_subtitle)
-      case (_, _, SELF_JOINING, _) => cxt.getString(R.string.calling__header__joining)
-      case (false, false, SELF_CONNECTED, duration) => duration
-      case _ => ""
-    }
+  val subtitleText = (for {
+    outgoing <- outgoingCall
+    video <- videoCall
+    state <- callState
+    dur <- duration
+  } yield (outgoing, video, state, dur)) map {
+    case (true,  true,  SELF_CALLING,                     _)        => cxt.getString(R.string.calling__header__outgoing_video_subtitle)
+    case (true,  false, SELF_CALLING,                     _)        => cxt.getString(R.string.calling__header__outgoing_subtitle)
+    case (false, true,  OTHER_CALLING,                    _)        => cxt.getString(R.string.calling__header__incoming_subtitle__video)
+    case (false, false, OTHER_CALLING | OTHERS_CONNECTED, _)        => cxt.getString(R.string.calling__header__incoming_subtitle)
+    case (_,     _,     SELF_JOINING,                     _)        => cxt.getString(R.string.calling__header__joining)
+    case (false, false, SELF_CONNECTED,                   duration) => duration
+    case _ => ""
   }
 
   val otherParticipants = currentChannel.zip(selfUser) map {
@@ -175,15 +162,14 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   val avsStateAndChangeReason = flowManager.flatMap(_.stateOfReceivedVideo)
   val cameraFailed = flowManager.flatMap(_.cameraFailedSig)
 
-  val stateMessageText = Signal(stateMap, cameraFailed, avsStateAndChangeReason, conversationName, otherSendingVideo).map { values =>
+  val stateMessageText = Signal(callState, cameraFailed, avsStateAndChangeReason, conversationName, otherSendingVideo).map { values =>
       verbose(s"$values")
-      import CallStateMap._
       values match {
-        case (OutgoingCall,  true, _, _, _)                                                                    => Option(cxt.getString(R.string.calling__self_preview_unavailable_long))
-        case (JoiningCall,   _, _, _, _)                                                                       => Option(cxt.getString(R.string.ongoing__connecting))
-        case (ConnectedCall, _, StateAndReason(AvsVideoState.STOPPED, AvsVideoReason.BAD_CONNECTION), _, true) => Option(cxt.getString(R.string.ongoing__poor_connection_message))
-        case (ConnectedCall, _, _, otherUserName, false)                                                       => Option(cxt.getString(R.string.ongoing__other_turned_off_video, otherUserName))
-        case (ConnectedCall, _, UnknownState, otherUserName, true)                                             => Option(cxt.getString(R.string.ongoing__other_unable_to_send_video, otherUserName))
+        case (SELF_CALLING,   true, _, _, _)                                                                    => Option(cxt.getString(R.string.calling__self_preview_unavailable_long))
+        case (SELF_JOINING,   _, _, _, _)                                                                       => Option(cxt.getString(R.string.ongoing__connecting))
+        case (SELF_CONNECTED, _, StateAndReason(AvsVideoState.STOPPED, AvsVideoReason.BAD_CONNECTION), _, true) => Option(cxt.getString(R.string.ongoing__poor_connection_message))
+        case (SELF_CONNECTED, _, _, otherUserName, false)                                                       => Option(cxt.getString(R.string.ongoing__other_turned_off_video, otherUserName))
+        case (SELF_CONNECTED, _, UnknownState, otherUserName, true)                                             => Option(cxt.getString(R.string.ongoing__other_unable_to_send_video, otherUserName))
         case _ => None
       }
   }
