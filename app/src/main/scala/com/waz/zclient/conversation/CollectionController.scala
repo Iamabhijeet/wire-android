@@ -48,7 +48,9 @@ protected class CollectionController(implicit injector: Injector) extends Inject
   val msgStorage = zms.map(_.messagesStorage)
 
   val assetStorage = zms.map(_.assetsStorage)
-  
+
+  val singleImage = Signal[Option[AssetId]](None)
+
   def messagesByType(tpe: CollectionController.Type, limit: Int = 0) = (for {
     msgs <- msgStorage
     convId <- currentConv
@@ -69,13 +71,20 @@ protected class CollectionController(implicit injector: Injector) extends Inject
     storage.find(m => m.convId == conv && m.msgType == messageType && !m.isEphemeral, MessageDataDao.findByType(conv, messageType)(_), identity).map(results => results.sortBy(_.time).reverse.take(if (limit > 0) limit else results.length))
   }
 
-  def bitmapSignal(assetId: AssetId, width: Int) = zms.flatMap { zms =>
+  private def loadBitmap(assetId: AssetId, width: Int)  = zms.flatMap { zms =>
     zms.assetsStorage.signal(assetId).flatMap {
       case data@AssetData.IsImage() => BitmapSignal(data, Single(width), zms.imageLoader, zms.imageCache)
       case _ => Signal.empty[BitmapResult]
     }
-  }.map {
+  }
+
+  def bitmapSquareSignal(assetId: AssetId, width: Int) = loadBitmap(assetId: AssetId, width: Int).map {
     case BitmapLoaded(bmp, _) => Option(BitmapUtils.cropRect(bmp, width))
+    case _ => None
+  }
+
+  def bitmapSignal(assetId: AssetId, width: Int) = loadBitmap(assetId: AssetId, width: Int).map {
+    case BitmapLoaded(bmp, _) => Option(bmp)
     case _ => None
   }
 

@@ -121,7 +121,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
   override def onBindViewHolder(holder: ViewHolder, position: Int): Unit = {
     holder match {
       case f: FileViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _files, position).foreach(f.setAsset)
-      case c: CollViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _images, position).foreach(s => c.setAsset(s, ctrler.bitmapSignal, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
+      case c: CollViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _images, position).foreach(s => c.setAsset(s, ctrler.bitmapSquareSignal, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
     }
   }
 
@@ -162,7 +162,10 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
 
   val imageListener = new OnClickListener {
     override def onClick(v: View): Unit = {
-      // TODO
+      v.getTag match {
+        case assetId: AssetId if contentMode == CollectionAdapter.VIEW_MODE_IMAGES => ctrler.singleImage ! Some(assetId)
+        case _ =>
+      }
     }
   }
 
@@ -292,6 +295,7 @@ object CollectionAdapter {
     view.setOnClickListener(listener)
 
     def setAsset(asset: Signal[AssetData], bitmap: (AssetId, Int) => Signal[Option[Bitmap]], width: Int, color: Int) = asset.on(Threading.Ui) { a =>
+      view.setTag(a.id)
       view.setAspectRatio(1)
       view.setImageBitmap(null)
       view.setBackgroundColor(color)

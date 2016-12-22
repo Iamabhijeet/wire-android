@@ -71,34 +71,45 @@
 
     </android.support.v7.widget.Toolbar>
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/rv__collection"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        />
+        android:layout_height="match_parent">
 
-    <LinearLayout
-        android:id="@+id/ll__collection__empty"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        >
-
-        <com.waz.zclient.ui.text.GlyphTextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/glyph__library"
-            android:textSize="@dimen/wire__text_size__insane"
-            android:padding="@dimen/wire__padding__regular"
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/rv__collection"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             />
 
-        <com.waz.zclient.ui.text.TypefaceTextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/library_empty"
-            />
+        <LinearLayout
+            android:id="@+id/ll__collection__empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            >
 
-    </LinearLayout>
+            <com.waz.zclient.ui.text.GlyphTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/glyph__library"
+                android:textSize="@dimen/wire__text_size__insane"
+                android:padding="@dimen/wire__padding__regular"
+                />
+
+            <com.waz.zclient.ui.text.TypefaceTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/library_empty"
+                />
+
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/fl__collection_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </FrameLayout>
 
 </LinearLayout>

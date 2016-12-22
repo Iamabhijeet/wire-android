@@ -19,19 +19,21 @@ package com.waz.zclient.conversation
 
 import android.content.Context
 import android.os.Bundle
+import android.support.v4.app.FragmentManager
 import android.support.v7.widget.RecyclerView.AdapterDataObserver
 import android.support.v7.widget.{GridLayoutManager, LinearLayoutManager, RecyclerView, Toolbar}
 import android.view.View.{OnClickListener, OnTouchListener}
 import android.view.{LayoutInflater, MotionEvent, View, ViewGroup}
 import android.widget.TextView
 import com.waz.ZLog._
+import com.waz.model.AssetId
 import com.waz.threading.Threading
 import com.waz.zclient.pages.BaseFragment
 import com.waz.zclient.pages.main.conversation.collections.CollectionItemDecorator
 import com.waz.zclient.utils.ViewUtils
 import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 
-class CollectionFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener {
+class CollectionFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener  {
 
   private implicit lazy val context: Context = getContext
 
@@ -39,6 +41,18 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
 
   lazy val controller = new CollectionController
   var adapter: CollectionAdapter = null
+
+  private def showSingleImage(assetId: AssetId) = {
+    getChildFragmentManager.findFragmentByTag(SingleImageCollectionFragment.TAG) match {
+      case null => getChildFragmentManager.beginTransaction.add(R.id.fl__collection_content, SingleImageCollectionFragment.newInstance(assetId), SingleImageCollectionFragment.TAG).addToBackStack(SingleImageCollectionFragment.TAG).commit
+      case fragment: SingleImageCollectionFragment => fragment.setAsset(assetId)
+      case _ =>
+    }
+  }
+
+  private def closeSingleImage() = {
+    getChildFragmentManager.popBackStackImmediate(SingleImageCollectionFragment.TAG, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+  }
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     val view = inflater.inflate(R.layout.fragment_collection, container, false)
@@ -49,6 +63,11 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
     emptyView.setVisibility(View.GONE)
 
     controller.conversationName.on(Threading.Ui)(name.setText)
+
+    controller.singleImage.on(Threading.Ui) {
+      case Some(id) => showSingleImage(id)
+      case _ => closeSingleImage()
+    }
 
     val columns = 4
     adapter = new CollectionAdapter(ViewUtils.getRealDisplayWidth(context), columns, controller)
@@ -98,6 +117,10 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
   }
 
   override def onBackPressed(): Boolean = {
+    getChildFragmentManager.findFragmentByTag(SingleImageCollectionFragment.TAG) match {
+      case fragment: SingleImageCollectionFragment => controller.singleImage ! None; return true
+      case _ =>
+    }
     if (!adapter.onBackPressed)
       getControllerFactory.getGiphyController.closeCollection()
     true
