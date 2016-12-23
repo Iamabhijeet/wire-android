@@ -313,18 +313,22 @@ object CollectionAdapter {
   case class CollViewHolder(view: AspectRatioImageView, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
     view.setOnClickListener(listener)
 
-    def setAssetMessage(messageData: MessageData, asset: Signal[AssetData], bitmap: (AssetId, Int) => Signal[Option[Bitmap]], width: Int, color: Int) = asset.on(Threading.Ui) { a =>
+    def setAssetMessage(messageData: MessageData, asset: Signal[AssetData], bitmap: (AssetId, Int) => Signal[Option[Bitmap]], width: Int, color: Int) = {
       view.setTag(messageData)
       view.setAspectRatio(1)
       view.setImageBitmap(null)
       view.setBackgroundColor(color)
       ViewUtils.setWidth(view, width)
       ViewUtils.setHeight(view, width)
-      bitmap(a.id, view.getWidth).on(Threading.Ui) {
+      view.setAlpha(0f)
+      view.animate
+        .alpha(1f)
+        .setDuration(view.getContext.getResources.getInteger(R.integer.content__image__directly_final_duration))
+        .start()
+      asset.flatMap(a => bitmap(a.id, width)).on(Threading.Ui) {
         case Some(b) => view.setImageBitmap(b)
         case None => //TODO bitmap didn't load
       }
-
     }
   }
 

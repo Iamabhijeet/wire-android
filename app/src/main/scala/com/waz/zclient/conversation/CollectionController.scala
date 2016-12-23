@@ -53,9 +53,9 @@ trait ICollectionsController {
 
   def bitmapSquareSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]]
 
-  def openCollection: Unit
+  def openCollection(): Unit
 
-  def closeCollection: Unit
+  def closeCollection(): Unit
 
   def shareMessageData(messageData: MessageData): Unit
 

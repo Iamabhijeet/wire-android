@@ -26,8 +26,8 @@
               android:clickable="true"
               android:focusable="true" >
 
-    <ImageView
-        android:id="@+id/ariv__image_view"
+    <com.waz.zclient.views.images.TouchImageView
+        android:id="@+id/tiv__image_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
