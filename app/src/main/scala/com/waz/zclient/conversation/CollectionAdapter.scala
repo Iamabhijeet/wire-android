@@ -31,7 +31,7 @@ import android.view.{LayoutInflater, View, ViewGroup}
 import android.widget.{LinearLayout, TextView}
 import com.waz.ZLog._
 import com.waz.api.Message
-import com.waz.model.{AssetData, AssetId, MessageData}
+import com.waz.model.{AssetData, AssetId, MessageData, MessageId}
 import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
 import com.waz.utils.returning
@@ -171,7 +171,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
   val imageListener = new OnClickListener {
     override def onClick(v: View): Unit = {
       v.getTag match {
-        case md: MessageData if contentMode == CollectionAdapter.VIEW_MODE_IMAGES => ctrler.singleImage ! Some(md)
+        case md: MessageData if contentMode == CollectionAdapter.VIEW_MODE_IMAGES => ctrler.focusedItem ! Some(md)
         case _ =>
       }
     }
@@ -258,6 +258,29 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
       case Header.`subYesterday` => "YESTERDAY"
       case Header.`subAgesAgo` => "AGES AGO"
       case _ => "Whatever"
+    }
+  }
+
+  def getItemPosition(messageData: MessageData): Int = {
+    contentMode match {
+      case CollectionAdapter.VIEW_MODE_ALL => all.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
+      case CollectionAdapter.VIEW_MODE_FILES => files.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
+      case CollectionAdapter.VIEW_MODE_IMAGES => images.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
+      case _ => -1
+    }
+  }
+
+  def getPreviousItem(messageData: MessageData): Option[MessageData] = {
+    getItemPosition(messageData) match {
+      case 0 => None
+      case pos => Some(getItem(pos - 1))
+    }
+  }
+
+  def getNextItem(messageData: MessageData): Option[MessageData] = {
+    getItemPosition(messageData) match {
+      case pos if pos >= getItemCount - 1 => None
+      case pos => Some(getItem(pos + 1))
     }
   }
 

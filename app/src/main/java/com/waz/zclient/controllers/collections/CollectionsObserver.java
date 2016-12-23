@@ -26,4 +26,8 @@ public interface CollectionsObserver {
     void closeCollection();
 
     void forwardCollectionMessage(Message message);
+
+    void nextItemRequested();
+
+    void previousItemRequested();
 }

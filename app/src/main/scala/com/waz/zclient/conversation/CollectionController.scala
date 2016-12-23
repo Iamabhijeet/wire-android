@@ -31,7 +31,7 @@ import com.waz.service.ZMessaging
 import com.waz.service.assets.AssetService.BitmapResult
 import com.waz.service.assets.AssetService.BitmapResult.BitmapLoaded
 import com.waz.service.images.BitmapSignal
-import com.waz.threading.{SerialDispatchQueue, Threading}
+import com.waz.threading.SerialDispatchQueue
 import com.waz.ui.MemoryImageCache.BitmapRequest.Single
 import com.waz.utils.events.{Signal, SourceSignal}
 import com.waz.zclient.controllers.collections.CollectionsObserver
@@ -42,7 +42,7 @@ import scala.concurrent.Future
 
 trait ICollectionsController {
 
-  val singleImage: SourceSignal[Option[MessageData]]
+  val focusedItem: SourceSignal[Option[MessageData]]
   val conversationName: Signal[String]
 
   def messagesByType(`type`: CollectionController.Type, limit: Int = 0): Signal[Seq[MessageData]]
@@ -56,6 +56,10 @@ trait ICollectionsController {
   def openCollection(): Unit
 
   def closeCollection(): Unit
+
+  def requestPreviousItem(): Unit
+
+  def requestNextItem(): Unit
 
   def shareMessageData(messageData: MessageData): Unit
 
@@ -95,7 +99,7 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
 
   override val conversationName = conversation map (data => if (data.convType == IConversation.Type.GROUP) data.name.filter(!_.isEmpty).getOrElse(data.generatedName) else data.generatedName)
 
-  override val singleImage: SourceSignal[Option[MessageData]] = Signal(None)
+  override val focusedItem: SourceSignal[Option[MessageData]] = Signal(None)
 
   //TODO - consider making messageType a Seq and passing that logic down to SE - (if we don't use a cursor)
   private def loadMessagesByType(conv: ConvId, storage: MessagesStorage, limit: Int, messageType: Message.Type) = {
@@ -119,30 +123,23 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
     case _ => None
   }
 
-  override def openCollection = {
+  private def performOnObservers(func: (CollectionsObserver) => Unit) = {
     val collectionObservers: CopyOnWriteArraySet[CollectionsObserver] = new CopyOnWriteArraySet[CollectionsObserver](observers)
     import scala.collection.JavaConversions._
     for (observer <- collectionObservers) {
-      observer.openCollection()
+      func(observer)
     }
   }
 
-  override def closeCollection = {
-    val collectionObservers: CopyOnWriteArraySet[CollectionsObserver] = new CopyOnWriteArraySet[CollectionsObserver](observers)
-    import scala.collection.JavaConversions._
-    for (observer <- collectionObservers) {
-      observer.closeCollection()
-    }
-  }
+  override def openCollection = performOnObservers(_.openCollection())
 
+  override def closeCollection = performOnObservers(_.closeCollection())
 
-  override def shareMessageData(messageData: MessageData): Unit = {
-    val collectionObservers: CopyOnWriteArraySet[CollectionsObserver] = new CopyOnWriteArraySet[CollectionsObserver](observers)
-    import scala.collection.JavaConversions._
-    for (observer <- collectionObservers) {
-      observer.forwardCollectionMessage(new impl.Message(messageData.id, messageData, IndexedSeq(), false)(ZMessaging.currentUi))
-    }
-  }
+  override def requestPreviousItem(): Unit = performOnObservers(_.previousItemRequested())
+
+  override def requestNextItem(): Unit = performOnObservers(_.nextItemRequested())
+
+  override def shareMessageData(messageData: MessageData): Unit = performOnObservers(_.forwardCollectionMessage(new impl.Message(messageData.id, messageData, IndexedSeq(), false)(ZMessaging.currentUi)))
 
   override def addObserver(collectionsObserver: CollectionsObserver): Unit = observers.add(collectionsObserver)
 
@@ -151,7 +148,7 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
 
 class StubCollectionController extends ICollectionsController{
 
-  override val singleImage: SourceSignal[Option[MessageData]] = Signal(None)
+  override val focusedItem: SourceSignal[Option[MessageData]] = Signal(None)
   override val conversationName: Signal[String] = Signal("")
 
   override def messagesByType(`type`: Type, limit: Int): Signal[Seq[MessageData]] = Signal(Seq())
@@ -165,6 +162,10 @@ class StubCollectionController extends ICollectionsController{
   override def bitmapSquareSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]] = Signal(None)
 
   override def closeCollection: Unit = {}
+
+  override def requestPreviousItem(): Unit = {}
+
+  override def requestNextItem(): Unit = {}
 
   override def shareMessageData(messageData: MessageData): Unit = {}
 

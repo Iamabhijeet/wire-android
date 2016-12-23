@@ -1294,6 +1294,16 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
     }
 
     @Override
+    public void nextItemRequested() {
+
+    }
+
+    @Override
+    public void previousItemRequested() {
+
+    }
+
+    @Override
     public void forwardCollectionMessage(Message message) {
        forwardMessage(message);
     }

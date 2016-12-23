@@ -19,7 +19,8 @@ package com.waz.zclient.conversation
 
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.view.View.{OnClickListener, OnLayoutChangeListener}
+import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.View.{OnClickListener, OnLayoutChangeListener, OnTouchListener}
 import android.view._
 import com.waz.model.{AssetData, AssetId}
 import com.waz.threading.Threading
@@ -37,15 +38,32 @@ class SingleImageCollectionFragment extends BaseFragment[CollectionFragment.Cont
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     val view = inflater.inflate(R.layout.fragment_single_image_collections, container, false)
     val shareButton: GlyphTextView = ViewUtils.getView(view, R.id.gtv__share_button)
-    val imageView: TouchImageView = ViewUtils.getView(getView, R.id.tiv__image_view)
+    val imageView: TouchImageView = ViewUtils.getView(view, R.id.tiv__image_view)
     shareButton.setOnClickListener(new OnClickListener {
       override def onClick(v: View): Unit = {
-        collectionController.singleImage.currentValue match {
+        collectionController.focusedItem.currentValue match {
           case Some(Some(messageData)) => collectionController.shareMessageData(messageData)
           case _ =>
         }
       }
     })
+
+    val gestureDetector = new GestureDetector(getContext, new SimpleOnGestureListener(){
+      override def onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean = {
+        if (imageView.isZoomed) return true
+        if (velocityX > SingleImageCollectionFragment.MIN_FLING_THRESHOLD) {
+          collectionController.requestPreviousItem()
+        } else if (velocityX < -SingleImageCollectionFragment.MIN_FLING_THRESHOLD) {
+          collectionController.requestNextItem()
+        }
+        true
+      }
+    })
+
+    imageView.setOnTouchListener(new OnTouchListener {
+      override def onTouch(v: View, event: MotionEvent): Boolean = gestureDetector.onTouchEvent(event)
+    })
+
     view
   }
 
@@ -87,6 +105,8 @@ object SingleImageCollectionFragment {
   val TAG = SingleImageCollectionFragment.getClass.getSimpleName
 
   val ARG_ASSET_ID = "ARG_ASSET_ID"
+
+  private val MIN_FLING_THRESHOLD = 1000
 
   def newInstance(assetId: AssetId): SingleImageCollectionFragment = {
     val fragment = new SingleImageCollectionFragment
