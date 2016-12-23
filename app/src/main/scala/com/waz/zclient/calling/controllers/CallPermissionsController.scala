@@ -37,7 +37,8 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
 
   val permissionsController = inject[PermissionsController]
 
-  val autoAnswerPreference = zms.flatMap(_.prefs.uiPreferenceBooleanSignal(cxt.getResources.getString(R.string.pref_dev_auto_answer_call_key)).signal)
+  val autoAnswerPreference = prefs.flatMap(p => p.uiPreferenceBooleanSignal(p.autoAnswerCallPrefKey).signal)
+  val callV3Preference = prefs.flatMap(p => p.uiPreferenceBooleanSignal(p.callingV3Key).signal)
 
   val incomingCall = callState.map {
     case VoiceChannelState.OTHER_CALLING => true
@@ -52,6 +53,9 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
   private var _isV3Call = false
   isV3Call(_isV3Call = _)
 
+  private var v3Pref = false
+  callV3Preference(v3Pref = _)
+
   private var _v3Service = Option.empty[CallingService]
   v3Service(s => _v3Service = Some(s))
 
@@ -60,7 +64,7 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
 
   def startCall(convId: ConvId, withVideo: Boolean): Unit = {
     permissionsController.requiring(if (withVideo) Set(CameraPermission, RecordAudioPermission) else Set(RecordAudioPermission)) {
-      if (_isV3Call)
+      if (v3Pref)
         _v3Service.foreach(_.startCall(convId, withVideo))
       else
         voiceService.currentValue.foreach(_.joinVoiceChannel(convId, withVideo))

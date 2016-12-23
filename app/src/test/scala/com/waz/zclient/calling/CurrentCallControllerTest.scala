@@ -78,10 +78,7 @@ class CurrentCallControllerTest extends JUnitSuite {
 
   lazy val mockVoiceChannelService = mock(classOf[VoiceChannelService])
 
-  lazy val callExists = controller.glob.channels map {
-    case (None, None) => false
-    case _ => true
-  }
+  lazy val callExists = controller.glob.activeCall
 
   @Before
   def setup(): Unit = {

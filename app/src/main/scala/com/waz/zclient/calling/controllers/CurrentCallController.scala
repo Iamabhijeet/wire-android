@@ -57,12 +57,9 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   private var _v3ServiceAndCurrentConvId = Option.empty[(CallingService, ConvId)]
   v3ServiceAndCurrentConvId(v => _v3ServiceAndCurrentConvId = Some(v))
 
-  val showOngoingControls = isV3Call.flatMap {
-    case true => v3Call.map(_.state != OTHER_CALLING)
-    case _ => v2CallState.flatMap {
-      case OTHER_CALLING | OTHERS_CONNECTED | TRANSFER_CALLING | TRANSFER_READY => Signal(false)
-      case _ => Signal(true)
-    }
+  val showOngoingControls = callState.map {
+    case OTHER_CALLING | OTHERS_CONNECTED | TRANSFER_CALLING | TRANSFER_READY => false
+    case _ => true
   }
 
   val muted = isV3Call.flatMap {
@@ -71,10 +68,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val videoSendState = isV3Call.flatMap {
-    case true => v3Call.map(_.receivingVideo).map {
-      case CallInfo.VideoSendState.Started => VideoSendState.SEND
-      case _ => VideoSendState.DONT_SEND
-    }
+    case true => v3Call.map(_.videoSendState)
     case _ => currentChannel map (_.video.videoSendState)
   }
 
@@ -103,7 +97,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val callEstablished = isV3Call.flatMap {
-    case true => glob.isV3CallActive
+    case true => v3Call.map(_.state == SELF_CONNECTED)
     case _ => currentChannel map (_.deviceState == ConnectionState.Connected)
   }
 
@@ -150,7 +144,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val otherSendingVideo = isV3Call.flatMap {
-    case true => v3Call.map(_.receivingVideo == CallInfo.VideoSendState.Started)
+    case true => v3Call.map(_.videoReceiveState == CallInfo.VideoReceiveState.Started)
     case _ => otherParticipants map {
       case Vector(other) => other.sendsVideo
       case _ => false

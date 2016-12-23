@@ -160,8 +160,6 @@ public class MainActivity extends BaseActivity implements MainPhoneFragment.Cont
 
         FragmentManager fragmentManager = getSupportFragmentManager();
 
-        getStoreFactory().getZMessagingApiStore().getApi().getMediaManager();
-
         initializeControllers();
 
         if (!getControllerFactory().getUserPreferencesController().showStatusBar()) {

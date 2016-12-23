@@ -21,8 +21,8 @@ import android.app.{Notification, NotificationManager, PendingIntent}
 import android.content.Intent
 import android.support.v4.app.NotificationCompat
 import com.waz.ZLog._
+import com.waz.api.VoiceChannelState
 import com.waz.api.VoiceChannelState._
-import com.waz.api.{KindOfCall, VoiceChannelState}
 import com.waz.bitmap.BitmapUtils
 import com.waz.model.VoiceChannelData.ChannelState
 import com.waz.model.{AssetData, ConvId}
@@ -55,9 +55,9 @@ class CallingNotificationsController(cxt: WireContext)(implicit inj: Injector) e
 
   (for {
     active <- activeCall
-    state <- callState
+    state <- callStateOpt
   } yield (active, state)).on(Threading.Ui) {
-    case (true, OTHER_CALLING) => notificationManager.cancel(ZETA_CALL_INCOMING_NOTIFICATION_ID)
+    case (true, Some(OTHER_CALLING)) => notificationManager.cancel(ZETA_CALL_INCOMING_NOTIFICATION_ID)
     case (true, _) => notificationManager.cancel(ZETA_CALL_ONGOING_NOTIFICATION_ID)
     case (false, _) =>
       notificationManager.cancel(ZETA_CALL_ONGOING_NOTIFICATION_ID)
