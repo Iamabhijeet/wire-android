@@ -21,18 +21,18 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.View.OnClickListener
 import android.view.{LayoutInflater, View, ViewGroup}
-import android.widget.{ImageView, RelativeLayout}
+import android.widget.ImageView
 import com.waz.model.{AssetData, AssetId}
 import com.waz.threading.Threading
 import com.waz.utils.events.Signal
 import com.waz.zclient.pages.BaseFragment
-import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R, ViewHelper}
+import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 import com.waz.zclient.ui.text.GlyphTextView
 import com.waz.zclient.utils.ViewUtils
 
 class SingleImageCollectionFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener {
 
-  lazy val collectionController = new CollectionController()
+  lazy val collectionController = getControllerFactory.getCollectionsController
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     val view = inflater.inflate(R.layout.fragment_single_image_collections, container, false)
@@ -40,7 +40,12 @@ class SingleImageCollectionFragment extends BaseFragment[CollectionFragment.Cont
     val assetId = AssetId(getArguments.getString(SingleImageCollectionFragment.ARG_ASSET_ID))
     setAsset(assetId)
     shareButton.setOnClickListener(new OnClickListener {
-      override def onClick(v: View): Unit = {}
+      override def onClick(v: View): Unit = {
+        collectionController.singleImage.currentValue match {
+          case Some(Some(messageData)) => collectionController.shareMessageData(messageData)
+          case _ =>
+        }
+      }
     })
     view
   }

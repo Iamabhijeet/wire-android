@@ -20,6 +20,8 @@ package com.waz.zclient.controllers;
 import android.app.Activity;
 import android.content.Context;
 import android.view.View;
+
+import com.waz.zclient.WireContext;
 import com.waz.zclient.controllers.accentcolor.AccentColorController;
 import com.waz.zclient.controllers.accentcolor.IAccentColorController;
 import com.waz.zclient.controllers.background.BackgroundController;
@@ -78,6 +80,8 @@ import com.waz.zclient.controllers.verification.IVerificationController;
 import com.waz.zclient.controllers.verification.VerificationController;
 import com.waz.zclient.controllers.vibrator.IVibratorController;
 import com.waz.zclient.controllers.vibrator.VibratorController;
+import com.waz.zclient.conversation.CollectionController;
+import com.waz.zclient.conversation.ICollectionsController;
 import com.waz.zclient.pages.main.conversation.controller.ConversationScreenController;
 import com.waz.zclient.pages.main.conversation.controller.IConversationScreenController;
 import com.waz.zclient.pages.main.conversationpager.controller.ISlidingPaneController;
@@ -153,6 +157,8 @@ public abstract class Base$$ControllerFactory implements IControllerFactory {
   protected IPickUserController pickUserController;
 
   protected IUsernamesController usernamesController;
+
+  protected ICollectionsController collectionsController;
 
   protected boolean isTornDown;
 
@@ -621,5 +627,14 @@ public abstract class Base$$ControllerFactory implements IControllerFactory {
             usernamesController = new UsernamesController();
         }
         return usernamesController;
+    }
+
+    @Override
+    public ICollectionsController getCollectionsController() {
+        verifyLifecycle();
+        if (collectionsController == null) {
+            collectionsController = new CollectionController(((WireContext)this.context).injector());
+        }
+        return collectionsController;
     }
 }

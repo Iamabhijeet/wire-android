@@ -84,6 +84,8 @@ import com.waz.zclient.controllers.usernames.UsernamesController;
 import com.waz.zclient.controllers.userpreferences.IUserPreferencesController;
 import com.waz.zclient.controllers.verification.IVerificationController;
 import com.waz.zclient.controllers.vibrator.IVibratorController;
+import com.waz.zclient.conversation.ICollectionsController;
+import com.waz.zclient.conversation.StubCollectionController;
 import com.waz.zclient.pages.main.conversation.controller.IConversationScreenController;
 import com.waz.zclient.pages.main.conversationpager.controller.ISlidingPaneController;
 import com.waz.zclient.pages.main.pickuser.controller.IPickUserController;
@@ -156,6 +158,8 @@ public class MockControllerFactory implements IControllerFactory {
   protected IPickUserController pickUserController = spy(StubPickUserController.class);
 
   protected IUsernamesController usernamesController = spy(StubUsernamesController.class);
+
+  protected ICollectionsController collectionsController = spy(StubCollectionController.class);
 
   @Override
   public IFocusController getFocusController() {
@@ -337,5 +341,10 @@ public class MockControllerFactory implements IControllerFactory {
     @Override
     public IUsernamesController getUsernameController() {
         return usernamesController;
+    }
+
+    @Override
+    public ICollectionsController getCollectionsController() {
+        return null;
     }
 }

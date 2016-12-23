@@ -43,6 +43,7 @@
             android:layout_centerInParent="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textSize="@dimen/wire__text_size__medium"
             android:text="@string/glyph__share"/>
 
     </RelativeLayout>

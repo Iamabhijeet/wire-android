@@ -87,6 +87,7 @@ import com.waz.zclient.camera.controllers.GlobalCameraController;
 import com.waz.zclient.controllers.IControllerFactory;
 import com.waz.zclient.controllers.accentcolor.AccentColorObserver;
 import com.waz.zclient.controllers.calling.CallingObserver;
+import com.waz.zclient.controllers.collections.CollectionsObserver;
 import com.waz.zclient.controllers.confirmation.ConfirmationCallback;
 import com.waz.zclient.controllers.confirmation.ConfirmationRequest;
 import com.waz.zclient.controllers.confirmation.IConfirmationController;
@@ -210,7 +211,8 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
                                                                                                   EmojiKeyboardLayout.Callback,
                                                                                                   ExtendedCursorContainer.Callback,
                                                                                                   EphemeralLayout.Callback,
-                                                                                                  TypingIndicatorView.Callback {
+                                                                                                  TypingIndicatorView.Callback,
+                                                                                                  CollectionsObserver{
     public static final String TAG = ConversationFragment.class.getName();
     private static final String SAVED_STATE_PREVIEW = "SAVED_STATE_PREVIEW";
     private static final int REQUEST_VIDEO_CAPTURE = 911;
@@ -490,7 +492,7 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.action_collection:
-                        getControllerFactory().getGiphyController().openCollection();
+                        getControllerFactory().getCollectionsController().openCollection();
                         return true;
                     case R.id.action_audio_call:
                         getControllerFactory().getCallingController().startCall(false);
@@ -595,7 +597,7 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
         getStoreFactory().getParticipantsStore().addParticipantsStoreObserver(this);
         getControllerFactory().getGlobalLayoutController().addKeyboardVisibilityObserver(this);
         getStoreFactory().getInAppNotificationStore().addInAppNotificationObserver(this);
-
+        getControllerFactory().getCollectionsController().addObserver(this);
         getControllerFactory().getSlidingPaneController().addObserver(this);
 
         extendedCursorContainer.setCallback(this);
@@ -661,6 +663,7 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
         getControllerFactory().getSlidingPaneController().removeObserver(this);
         getControllerFactory().getConversationScreenController().setConversationStreamUiReady(false);
         getControllerFactory().getRequestPermissionsController().removeObserver(this);
+        getControllerFactory().getCollectionsController().removeObserver(this);
         super.onStop();
     }
 
@@ -1288,6 +1291,11 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
     @Override
     public void closeCollection() {
 
+    }
+
+    @Override
+    public void forwardCollectionMessage(Message message) {
+       forwardMessage(message);
     }
 
     //////////////////////////////////////////////////////////////////////////////

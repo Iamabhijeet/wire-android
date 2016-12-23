@@ -75,14 +75,4 @@ public class StubGiphyController implements IGiphyController {
   public boolean isInputAllowedForGiphy(String input) {
     return false;
   }
-
-    @Override
-    public void openCollection() {
-
-    }
-
-  @Override
-  public void closeCollection() {
-
-  }
 }

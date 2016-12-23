@@ -15,16 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.waz.zclient.controllers.giphy;
+package com.waz.zclient.controllers.collections;
 
-public interface GiphyObserver {
-    void onSearch(String keyword);
+import com.waz.api.Message;
 
-    void onRandomSearch();
+public interface CollectionsObserver {
 
-    void onTrendingSearch();
+    void openCollection();
 
-    void onCloseGiphy();
+    void closeCollection();
 
-    void onCancelGiphy();
+    void forwardCollectionMessage(Message message);
 }

@@ -34,6 +34,7 @@ import com.waz.api.User;
 import com.waz.zclient.OnBackPressedListener;
 import com.waz.zclient.R;
 import com.waz.zclient.controllers.accentcolor.AccentColorObserver;
+import com.waz.zclient.controllers.collections.CollectionsObserver;
 import com.waz.zclient.controllers.confirmation.ConfirmationObserver;
 import com.waz.zclient.controllers.confirmation.ConfirmationRequest;
 import com.waz.zclient.controllers.confirmation.IConfirmationController;
@@ -66,7 +67,8 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
                                                                                             SingleImageFragment.Container,
                                                                                             GiphyObserver,
                                                                                             ConfirmationObserver,
-                                                                                            AccentColorObserver {
+                                                                                            AccentColorObserver,
+                                                                                            CollectionsObserver{
 
     public static final String TAG = MainPhoneFragment.class.getName();
     private ConfirmationMenu confirmationMenu;
@@ -106,6 +108,7 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
         getControllerFactory().getGiphyController().addObserver(this);
         getControllerFactory().getConfirmationController().addConfirmationObserver(this);
         getControllerFactory().getAccentColorController().addAccentColorObserver(this);
+        getControllerFactory().getCollectionsController().addObserver(this);
 
         getControllerFactory().getAccentColorController().addAccentColorObserver(backgroundLayout);
         getControllerFactory().getBackgroundController().addBackgroundObserver(backgroundLayout);
@@ -124,6 +127,7 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
         getControllerFactory().getOnboardingController().removeOnboardingControllerObserver(this);
         getControllerFactory().getConfirmationController().removeConfirmationObserver(this);
         getControllerFactory().getAccentColorController().removeAccentColorObserver(this);
+        getControllerFactory().getCollectionsController().removeObserver(this);
 
         getControllerFactory().getAccentColorController().removeAccentColorObserver(backgroundLayout);
         getControllerFactory().getBackgroundController().removeBackgroundObserver(backgroundLayout);
@@ -363,6 +367,12 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
                                                         FragmentManager.POP_BACK_STACK_INCLUSIVE);
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////
+    //
+    //  CollectionsObserver
+    //
+    //////////////////////////////////////////////////////////////////////////////////////////
+
     @Override
     public void openCollection() {
         getChildFragmentManager().beginTransaction()
@@ -377,6 +387,11 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
     public void closeCollection() {
         getChildFragmentManager().popBackStackImmediate(CollectionFragment.TAG(),
                                                         FragmentManager.POP_BACK_STACK_INCLUSIVE);
+    }
+
+    @Override
+    public void forwardCollectionMessage(Message message) {
+
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////

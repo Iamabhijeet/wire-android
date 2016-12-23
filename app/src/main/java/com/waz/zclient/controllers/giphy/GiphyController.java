@@ -106,22 +106,6 @@ public class GiphyController implements IGiphyController {
         return words.length <= MAXIMUM_ALLOWED_WORD_COUNT;
     }
 
-    @Override
-    public void openCollection() {
-        final CopyOnWriteArraySet<GiphyObserver> giphyObservers = new CopyOnWriteArraySet<>(observers);
-        for (GiphyObserver observer : giphyObservers) {
-            observer.openCollection();
-        }
-    }
-
-    @Override
-    public void closeCollection() {
-        final CopyOnWriteArraySet<GiphyObserver> giphyObservers = new CopyOnWriteArraySet<>(observers);
-        for (GiphyObserver observer : giphyObservers) {
-            observer.closeCollection();
-        }
-    }
-
     private String extractSearchQuery(String input) {
         return input.replaceFirst(GIPHY_QUERY_REGEX, "$2").trim();
     }

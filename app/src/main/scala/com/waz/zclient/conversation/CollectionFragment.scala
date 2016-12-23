@@ -20,7 +20,6 @@ package com.waz.zclient.conversation
 import android.content.Context
 import android.os.Bundle
 import android.support.v4.app.FragmentManager
-import android.support.v7.widget.RecyclerView.AdapterDataObserver
 import android.support.v7.widget.{GridLayoutManager, LinearLayoutManager, RecyclerView, Toolbar}
 import android.view.View.{OnClickListener, OnTouchListener}
 import android.view.{LayoutInflater, MotionEvent, View, ViewGroup}
@@ -31,7 +30,7 @@ import com.waz.threading.Threading
 import com.waz.utils.events.Signal
 import com.waz.zclient.pages.BaseFragment
 import com.waz.zclient.pages.main.conversation.collections.CollectionItemDecorator
-import com.waz.zclient.utils.{StringUtils, ViewUtils}
+import com.waz.zclient.utils.ViewUtils
 import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 import org.threeten.bp.{LocalDateTime, ZoneId}
 
@@ -41,7 +40,7 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
 
   private implicit val tag: LogTag = logTagFor[CollectionFragment]
 
-  lazy val controller = new CollectionController
+  lazy val controller = getControllerFactory.getCollectionsController
   var adapter: CollectionAdapter = null
 
   private def showSingleImage(assetId: AssetId) = {
@@ -132,7 +131,7 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
       case _ =>
     }
     if (!adapter.onBackPressed)
-      getControllerFactory.getGiphyController.closeCollection()
+      getControllerFactory.getCollectionsController.closeCollection
     true
   }
 }

@@ -44,6 +44,7 @@ import com.waz.api.UsersList;
 import com.waz.api.Verification;
 import com.waz.zclient.OnBackPressedListener;
 import com.waz.zclient.R;
+import com.waz.zclient.controllers.collections.CollectionsObserver;
 import com.waz.zclient.controllers.drawing.DrawingController;
 import com.waz.zclient.controllers.drawing.DrawingObserver;
 import com.waz.zclient.controllers.drawing.IDrawingController;
@@ -107,7 +108,8 @@ public class RootFragment extends BaseFragment<RootFragment.Container> implement
                                                                        ParticipantsStoreObserver,
                                                                        UsernamesControllerObserver,
                                                                        ConversationFragment.Container,
-                                                                       ConversationListManagerFragment.Container {
+                                                                       ConversationListManagerFragment.Container,
+                                                                       CollectionsObserver {
     public static final String TAG = RootFragment.class.getName();
     private static final Interpolator RIGHT_VIEW_ALPHA_INTERPOLATOR = new Quart.EaseOut();
     private View leftView;
@@ -242,6 +244,7 @@ public class RootFragment extends BaseFragment<RootFragment.Container> implement
         getStoreFactory().getParticipantsStore().addParticipantsStoreObserver(this);
         getControllerFactory().getLocationController().addObserver(this);
         onPagerEnabledStateHasChanged(getControllerFactory().getNavigationController().isPagerEnabled());
+        getControllerFactory().getCollectionsController().addObserver(this);
     }
 
     @Override
@@ -258,6 +261,7 @@ public class RootFragment extends BaseFragment<RootFragment.Container> implement
         getControllerFactory().getPickUserController().removePickUserScreenControllerObserver(this);
         getControllerFactory().getGiphyController().removeObserver(this);
         getControllerFactory().getDrawingController().removeDrawingObserver(this);
+        getControllerFactory().getCollectionsController().removeObserver(this);
         super.onStop();
     }
 
@@ -572,6 +576,11 @@ public class RootFragment extends BaseFragment<RootFragment.Container> implement
         if (fragment != null) {
             getChildFragmentManager().beginTransaction().remove(fragment).commit();
         }
+    }
+
+    @Override
+    public void forwardCollectionMessage(Message message) {
+
     }
 
     @Override

@@ -27,7 +27,6 @@ import android.support.v7.widget.RecyclerView.{AdapterDataObserver, ViewHolder}
 import android.text.format.Formatter
 import android.util.AttributeSet
 import android.view.View.OnClickListener
-import android.view.ViewGroup.LayoutParams
 import android.view.{LayoutInflater, View, ViewGroup}
 import android.widget.{LinearLayout, TextView}
 import com.waz.ZLog._
@@ -46,7 +45,7 @@ import org.threeten.bp.temporal.ChronoUnit
 import org.threeten.bp.{Instant, LocalDateTime, ZoneId}
 
 //For now just handling images
-class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionController)(implicit context: Context, injector: Injector, eventContext: EventContext) extends RecyclerView.Adapter[ViewHolder] with Injectable {
+class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsController)(implicit context: Context, injector: Injector, eventContext: EventContext) extends RecyclerView.Adapter[ViewHolder] with Injectable {
 
   private implicit val tag: LogTag = logTagFor[CollectionAdapter]
 
@@ -118,6 +117,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
         all.currentValue.getOrElse(Seq.empty)(position).msgType match {
           case Message.Type.ANY_ASSET => CollectionAdapter.VIEW_TYPE_FILE
           case Message.Type.ASSET => CollectionAdapter.VIEW_TYPE_IMAGE
+          case _ => CollectionAdapter.VIEW_TYPE_FILE
         }
       }
       case CollectionAdapter.VIEW_MODE_FILES => CollectionAdapter.VIEW_TYPE_FILE
@@ -212,6 +212,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
           case Message.Type.ANY_ASSET => Header.mainFiles
           case Message.Type.ASSET => Header.mainImages
           case Message.Type.RICH_MEDIA => Header.mainLinks
+          case _ => Header.mainImages
         }
       }
       case _ => {
