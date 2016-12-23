@@ -22,7 +22,7 @@ import com.waz.api.{IConversation, Message}
 import com.waz.bitmap.BitmapUtils
 import com.waz.content.MessagesStorage
 import com.waz.model.MessageData.MessageDataDao
-import com.waz.model.{AssetData, AssetId, ConvId}
+import com.waz.model.{AssetData, AssetId, ConvId, MessageData}
 import com.waz.service.ZMessaging
 import com.waz.service.assets.AssetService.BitmapResult
 import com.waz.service.assets.AssetService.BitmapResult.BitmapLoaded
@@ -49,7 +49,7 @@ protected class CollectionController(implicit injector: Injector) extends Inject
 
   val assetStorage = zms.map(_.assetsStorage)
 
-  val singleImage = Signal[Option[AssetId]](None)
+  val singleImage = Signal[Option[MessageData]](None)
 
   def messagesByType(tpe: CollectionController.Type, limit: Int = 0) = (for {
     msgs <- msgStorage

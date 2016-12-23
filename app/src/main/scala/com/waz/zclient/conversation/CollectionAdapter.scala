@@ -23,7 +23,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.support.v4.content.ContextCompat
 import android.support.v7.widget.RecyclerView
-import android.support.v7.widget.RecyclerView.ViewHolder
+import android.support.v7.widget.RecyclerView.{AdapterDataObserver, ViewHolder}
 import android.text.format.Formatter
 import android.util.AttributeSet
 import android.view.View.OnClickListener
@@ -95,6 +95,13 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
   }
 
   var header: CollectionHeaderLinearLayout = null
+  val adapterState = Signal[(Int, Int)](contentMode, -1)
+
+  registerAdapterDataObserver(new AdapterDataObserver {
+    override def onChanged(): Unit = {
+      adapterState ! (contentMode, getItemCount)
+    }
+  })
 
   override def getItemCount: Int = {
     contentMode match {
@@ -121,8 +128,8 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
 
   override def onBindViewHolder(holder: ViewHolder, position: Int): Unit = {
     holder match {
-      case f: FileViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _files, position).foreach(f.setAsset)
-      case c: CollViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _images, position).foreach(s => c.setAsset(s, ctrler.bitmapSquareSignal, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
+      case f: FileViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _files, position).foreach(a => f.setAsset(a._2))
+      case c: CollViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _images, position).foreach(s => c.setAssetMessage(s._1, s._2, ctrler.bitmapSquareSignal, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
     }
   }
 
@@ -159,12 +166,12 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: CollectionContro
     }
   }
 
-  private def assetSignal(col: Seq[MessageData], pos: Int): Option[Signal[AssetData]] = col.lift(pos).map(m => ctrler.assetSignal(m.assetId))
+  private def assetSignal(col: Seq[MessageData], pos: Int): Option[(MessageData, Signal[AssetData])] = col.lift(pos).map(m => (m, ctrler.assetSignal(m.assetId)))
 
   val imageListener = new OnClickListener {
     override def onClick(v: View): Unit = {
       v.getTag match {
-        case assetId: AssetId if contentMode == CollectionAdapter.VIEW_MODE_IMAGES => ctrler.singleImage ! Some(assetId)
+        case md: MessageData if contentMode == CollectionAdapter.VIEW_MODE_IMAGES => ctrler.singleImage ! Some(md)
         case _ =>
       }
     }
@@ -305,8 +312,8 @@ object CollectionAdapter {
   case class CollViewHolder(view: AspectRatioImageView, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
     view.setOnClickListener(listener)
 
-    def setAsset(asset: Signal[AssetData], bitmap: (AssetId, Int) => Signal[Option[Bitmap]], width: Int, color: Int) = asset.on(Threading.Ui) { a =>
-      view.setTag(a.id)
+    def setAssetMessage(messageData: MessageData, asset: Signal[AssetData], bitmap: (AssetId, Int) => Signal[Option[Bitmap]], width: Int, color: Int) = asset.on(Threading.Ui) { a =>
+      view.setTag(messageData)
       view.setAspectRatio(1)
       view.setImageBitmap(null)
       view.setBackgroundColor(color)
