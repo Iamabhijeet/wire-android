@@ -41,7 +41,7 @@ class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) exte
   override def inflate() = inflate(R.layout.message_video_asset_content)
 
   imageDrawable.state.map {
-    case Loaded(_, _) => getColor(R.color.white)
+    case Loaded(_, _, _) => getColor(R.color.white)
     case _ => getColor(R.color.black)
   }.on(Threading.Ui)(durationView.setTextColor)
 
