@@ -79,7 +79,7 @@ class LocationPartView(context: Context, attrs: AttributeSet, style: Int) extend
   }
 
   val imageLoaded = imageDrawable.state.map {
-    case State.Loaded(_, _) => true
+    case State.Loaded(_, _, _) => true
     case _ => false
   }
 

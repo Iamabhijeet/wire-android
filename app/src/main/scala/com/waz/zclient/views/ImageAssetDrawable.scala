@@ -82,7 +82,7 @@ class ImageAssetDrawable(
   private def bitmapState(im: ImageSource, w: Int) =
     images.imageSignal(im, request(w))
       .map[State] {
-        case BitmapLoaded(bmp, _) => State.Loaded(im, Some(bmp))
+        case BitmapLoaded(bmp, etag) => State.Loaded(im, Some(bmp), etag)
         case _ => State.Failed(im)
       }
       .orElse(Signal const State.Loading(im))
@@ -194,7 +194,7 @@ object ImageAssetDrawable {
   }
   object State {
     case class Loading(src: ImageSource) extends State
-    case class Loaded(src: ImageSource, override val bmp: Option[Bitmap]) extends State
+    case class Loaded(src: ImageSource, override val bmp: Option[Bitmap], etag: Int = 0) extends State
     case class Failed(src: ImageSource) extends State
   }
 
