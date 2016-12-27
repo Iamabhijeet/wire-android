@@ -21,19 +21,20 @@ import android.content.Context
 import android.os.Bundle
 import android.support.v4.app.FragmentManager
 import android.support.v7.widget.{GridLayoutManager, LinearLayoutManager, RecyclerView, Toolbar}
+import android.util.Patterns
 import android.view.View.{OnClickListener, OnTouchListener}
 import android.view.{LayoutInflater, MotionEvent, View, ViewGroup}
 import android.widget.TextView
 import com.waz.ZLog._
 import com.waz.api.Message
-import com.waz.model.AssetId
+import com.waz.model.{AssetId, MessageData}
 import com.waz.threading.Threading
 import com.waz.utils.events.Signal
 import com.waz.zclient.controllers.collections.CollectionsObserver
 import com.waz.zclient.pages.BaseFragment
 import com.waz.zclient.pages.main.conversation.collections.CollectionItemDecorator
 import com.waz.zclient.utils.ViewUtils
-import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
+import com.waz.zclient.{FragmentHelper, MainActivity, OnBackPressedListener, R}
 import org.threeten.bp.{LocalDateTime, ZoneId}
 
 class CollectionFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener with CollectionsObserver  {
@@ -72,6 +73,22 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
     }
   }
 
+  private def openUrl(messageData: MessageData): Unit = {
+    val url = extractUrl(messageData)
+    getActivity match {
+      case ma: MainActivity => ma.onOpenUrl(url)
+      case _ =>
+    }
+  }
+
+  private def extractUrl(messageData: MessageData): String = {
+    if (messageData.content.exists(_.openGraph.nonEmpty)) {
+      messageData.content.find(_.tpe == Message.Part.Type.WEB_LINK).map(_.content).getOrElse("")
+    } else {
+      messageData.content.find(content => content.tpe == Message.Part.Type.TEXT && Patterns.WEB_URL.matcher(content.content).matches()).map(_.content).getOrElse("")
+    }
+  }
+
   private def textIdForContentMode(contentMode: Int) = contentMode match {
     case CollectionAdapter.VIEW_MODE_IMAGES => R.string.library_header_pictures
     case CollectionAdapter.VIEW_MODE_FILES => R.string.library_header_files
@@ -89,6 +106,7 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
 
     controller.focusedItem.on(Threading.Ui) {
       case Some(md) if md.msgType == Message.Type.ASSET => showSingleImage(md.assetId)
+      case Some(md) if md.msgType == Message.Type.RICH_MEDIA => openUrl(md); controller.focusedItem ! None
       case _ => closeSingleImage()
     }
 

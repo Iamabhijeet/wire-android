@@ -21,25 +21,28 @@ import java.util.Locale
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.support.v4.content.ContextCompat
 import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.RecyclerView.{AdapterDataObserver, ViewHolder}
 import android.text.format.Formatter
-import android.util.AttributeSet
+import android.util.{AttributeSet, Patterns}
 import android.view.View.OnClickListener
 import android.view.{LayoutInflater, View, ViewGroup}
-import android.widget.{LinearLayout, TextView}
+import android.widget.{FrameLayout, LinearLayout, TextView}
 import com.waz.ZLog._
-import com.waz.api.Message
-import com.waz.model.{AssetData, AssetId, MessageData, MessageId}
+import com.waz.api.{ImageAsset, ImageAssetFactory, Message}
+import com.waz.model.{AssetData, AssetId, MessageData}
 import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
 import com.waz.utils.returning
-import com.waz.zclient.conversation.CollectionAdapter.{CollViewHolder, CollectionHeaderLinearLayout, FileViewHolder}
+import com.waz.zclient.conversation.CollectionAdapter._
+import com.waz.zclient.core.api.scala.ModelObserver
 import com.waz.zclient.pages.main.conversation.views.AspectRatioImageView
 import com.waz.zclient.ui.drawable.FileDrawable
 import com.waz.zclient.ui.utils.ResourceUtils
 import com.waz.zclient.utils.ViewUtils
+import com.waz.zclient.views.images.ImageAssetView
 import com.waz.zclient.{Injectable, Injector, R}
 import org.threeten.bp.temporal.ChronoUnit
 import org.threeten.bp.{Instant, LocalDateTime, ZoneId}
@@ -70,6 +73,10 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
   private var _files = Seq.empty[MessageData]
   files(_files = _)
 
+  val links = ctrler.messagesByType(CollectionController.Links)
+  private var _links = Seq.empty[MessageData]
+  links(_links = _)
+
   var contentMode = CollectionAdapter.VIEW_MODE_ALL
 
   images.onChanged.on(Threading.Ui) { _ =>
@@ -82,6 +89,13 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
   files.onChanged.on(Threading.Ui) { _ =>
     contentMode match {
       case CollectionAdapter.VIEW_MODE_FILES => notifyDataSetChanged()
+      case _ =>
+    }
+  }
+
+  links.onChanged.on(Threading.Ui) { _ =>
+    contentMode match {
+      case CollectionAdapter.VIEW_MODE_LINKS => notifyDataSetChanged()
       case _ =>
     }
   }
@@ -107,6 +121,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
       case CollectionAdapter.VIEW_MODE_ALL => all.currentValue.map(_.size).getOrElse(0)
       case CollectionAdapter.VIEW_MODE_FILES => files.currentValue.map(_.size).getOrElse(0)
       case CollectionAdapter.VIEW_MODE_IMAGES => images.currentValue.map(_.size).getOrElse(0)
+      case CollectionAdapter.VIEW_MODE_LINKS => links.currentValue.map(_.size).getOrElse(0)
       case _ => 0
     }
   }
@@ -117,19 +132,29 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
         all.currentValue.getOrElse(Seq.empty)(position).msgType match {
           case Message.Type.ANY_ASSET => CollectionAdapter.VIEW_TYPE_FILE
           case Message.Type.ASSET => CollectionAdapter.VIEW_TYPE_IMAGE
+          case Message.Type.RICH_MEDIA if hasOpenGraphData(position) => CollectionAdapter.VIEW_TYPE_LINK_PREVIEW
+          case Message.Type.RICH_MEDIA => CollectionAdapter.VIEW_TYPE_SIMPLE_LINK
           case _ => CollectionAdapter.VIEW_TYPE_FILE
         }
       }
       case CollectionAdapter.VIEW_MODE_FILES => CollectionAdapter.VIEW_TYPE_FILE
       case CollectionAdapter.VIEW_MODE_IMAGES => CollectionAdapter.VIEW_TYPE_IMAGE
-      case _ => 0
+      case CollectionAdapter.VIEW_MODE_LINKS if hasOpenGraphData(position) => CollectionAdapter.VIEW_TYPE_LINK_PREVIEW
+      case CollectionAdapter.VIEW_MODE_LINKS => CollectionAdapter.VIEW_TYPE_SIMPLE_LINK
+      case _ => CollectionAdapter.VIEW_TYPE_FILE
     }
+  }
+
+  private def hasOpenGraphData(position: Int): Boolean = {
+    getItem(position).content.exists(_.openGraph.nonEmpty)
   }
 
   override def onBindViewHolder(holder: ViewHolder, position: Int): Unit = {
     holder match {
       case f: FileViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _files, position).foreach(a => f.setAsset(a._2))
       case c: CollViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _images, position).foreach(s => c.setAssetMessage(s._1, s._2, ctrler.bitmapSquareSignal, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
+      case l: LinkPreviewViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _links, position).foreach(a => l.setMessageData(a._1))
+      case l: SimpleLinkViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _links, position).foreach(a => l.setMessageData(a._1))
     }
   }
 
@@ -183,10 +208,21 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
     }
   }
 
+  val linkListener = new OnClickListener {
+    override def onClick(v: View): Unit = {
+      v.getTag match {
+        case md: MessageData if contentMode == CollectionAdapter.VIEW_MODE_LINKS => ctrler.focusedItem ! Some(md)
+        case _ =>
+      }
+    }
+  }
+
   override def onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
     viewType match {
       case CollectionAdapter.VIEW_TYPE_FILE => FileViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_file, parent, false).asInstanceOf[LinearLayout], fileListener)
       case CollectionAdapter.VIEW_TYPE_IMAGE => CollViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_image, parent, false).asInstanceOf[AspectRatioImageView], imageListener)
+      case CollectionAdapter.VIEW_TYPE_LINK_PREVIEW => LinkPreviewViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_link, parent, false).asInstanceOf[LinearLayout], linkListener)
+      case CollectionAdapter.VIEW_TYPE_SIMPLE_LINK => SimpleLinkViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_simple_link, parent, false).asInstanceOf[LinearLayout], linkListener)
       case _ => returning(null.asInstanceOf[ViewHolder])(_ => error(s"Unexpected ViewType: $viewType"))
     }
 
@@ -194,6 +230,8 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
     getItemViewType(position) match {
       case CollectionAdapter.VIEW_TYPE_FILE => true
       case CollectionAdapter.VIEW_TYPE_IMAGE => false
+      case CollectionAdapter.VIEW_TYPE_LINK_PREVIEW => true
+      case CollectionAdapter.VIEW_TYPE_SIMPLE_LINK => true
     }
   }
 
@@ -202,6 +240,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
       case CollectionAdapter.VIEW_MODE_ALL => all.currentValue.getOrElse(Seq.empty)(position)
       case CollectionAdapter.VIEW_MODE_IMAGES => images.currentValue.getOrElse(Seq.empty)(position)
       case CollectionAdapter.VIEW_MODE_FILES => files.currentValue.getOrElse(Seq.empty)(position)
+      case CollectionAdapter.VIEW_MODE_LINKS => links.currentValue.getOrElse(Seq.empty)(position)
     }
   }
 
@@ -266,6 +305,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
       case CollectionAdapter.VIEW_MODE_ALL => all.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
       case CollectionAdapter.VIEW_MODE_FILES => files.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
       case CollectionAdapter.VIEW_MODE_IMAGES => images.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
+      case CollectionAdapter.VIEW_MODE_LINKS => links.currentValue.map(_.indexOf(messageData)).getOrElse(-1)
       case _ => -1
     }
   }
@@ -304,6 +344,8 @@ object CollectionAdapter {
 
   val VIEW_TYPE_IMAGE = 0
   val VIEW_TYPE_FILE = 1
+  val VIEW_TYPE_LINK_PREVIEW = 2
+  val VIEW_TYPE_SIMPLE_LINK = 3
 
   case class CollectionHeaderLinearLayout(context: Context, attrs: AttributeSet, defStyleAttr: Int) extends LinearLayout(context, attrs, defStyleAttr) {
 
@@ -315,7 +357,7 @@ object CollectionAdapter {
 
     LayoutInflater.from(context).inflate(R.layout.row_collection_header, this, true)
     setOrientation(LinearLayout.HORIZONTAL)
-    setBackgroundColor(ContextCompat.getColor(context, R.color.light_graphite_24))
+    setBackgroundColor(ContextCompat.getColor(context, R.color.header_background))
   }
 
   case class FileViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
@@ -330,7 +372,6 @@ object CollectionAdapter {
       detailTextView.setText(view.getContext.getString(R.string.content__file__status__default__size_and_extension,
         Formatter.formatFileSize(view.getContext, a.sizeInBytes), a.fileExtension.toUpperCase(Locale.getDefault)))
     }
-
   }
 
   case class CollViewHolder(view: AspectRatioImageView, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
@@ -355,4 +396,35 @@ object CollectionAdapter {
     }
   }
 
+  case class LinkPreviewViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
+    val titleTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_conversation__link_preview__title)
+    val urlTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_conversation__link_preview__url)
+    val previewImageAssetView: ImageAssetView = ViewUtils.getView(view, R.id.iv__row_conversation__link_preview__image)
+    val previewImageContainer: FrameLayout = ViewUtils.getView(view, R.id.fl__row_conversation__link_preview__image_container)
+    view.setOnClickListener(listener)
+
+    private val imageAssetModelObserver: ModelObserver[ImageAsset] = new ModelObserver[ImageAsset]() {
+      override def updated(imageAsset: ImageAsset): Unit = {
+        previewImageAssetView.setImageAsset(imageAsset)
+      }
+    }
+
+    def setMessageData(messageData: MessageData): Unit = {
+      view.setTag(messageData)
+      titleTextView.setText(messageData.content.find(_.openGraph.nonEmpty).map(_.openGraph.get.title).getOrElse(""))
+      urlTextView.setText(messageData.content.find(_.tpe == Message.Part.Type.WEB_LINK).map(_.content).getOrElse(""))
+      val imageAsset = ImageAssetFactory.getImageAsset(messageData.content.find(_.openGraph.nonEmpty).flatMap(_.openGraph.flatMap(_.image)).getOrElse(Uri.EMPTY))
+      imageAssetModelObserver.addAndUpdate(imageAsset)
+    }
+  }
+
+  case class SimpleLinkViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
+    val urlTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_collection__link__url)
+    view.setOnClickListener(listener)
+
+    def setMessageData(messageData: MessageData): Unit = {
+      view.setTag(messageData)
+      urlTextView.setText(messageData.content.find(content => content.tpe == Message.Part.Type.TEXT && Patterns.WEB_URL.matcher(content.content).matches()).map(_.content).getOrElse(""))
+    }
+  }
 }

@@ -142,6 +142,9 @@
     <color name="text__primary_disabled_dark">@color/white_32</color>
     <color name="text__primary_disabled_light">@color/black_24</color>
 
+    <!-- Collections -->
+    <color name="header_background">#FFC3C7CA</color>
+
     <!--  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     STILL UNSORTED:
 
