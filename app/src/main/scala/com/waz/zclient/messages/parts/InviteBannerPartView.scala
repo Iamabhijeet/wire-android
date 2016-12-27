@@ -40,8 +40,8 @@ class InviteBannerPartView(context: Context, attrs: AttributeSet, style: Int) ex
   private val pickUserController = inject[IPickUserController]
 
   lazy val showContactsButton: ZetaButton =
-    returning(findById(R.id.zb__conversation__invite_banner__show_contacts)) { button =>
-      new RichView(button).onClick {
+    returning(findById[ZetaButton](R.id.zb__conversation__invite_banner__show_contacts)) { button =>
+      button.onClick {
         pickUserController.showPickUser(IPickUserController.Destination.CURSOR, null)
       }
     }
