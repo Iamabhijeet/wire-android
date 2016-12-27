@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.waz.zclient.messages.parts
+package com.waz.zclient.messages.parts.assets
 
 import android.content.Context
 import android.graphics.drawable.Drawable
@@ -25,16 +25,14 @@ import com.waz.threading.Threading
 import com.waz.utils.events.Signal
 import com.waz.zclient.R
 import com.waz.zclient.messages.MsgPart
-import com.waz.zclient.messages.parts.DeliveryState.OtherUploading
+import com.waz.zclient.messages.parts.assets.DeliveryState.OtherUploading
 import com.waz.zclient.utils.ContextUtils._
-import com.waz.zclient.utils.{AssetUtils, RichView}
 import com.waz.zclient.views.ImageAssetDrawable
 import com.waz.zclient.views.ImageAssetDrawable.State.Loaded
 
 class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) extends FrameLayout(context, attrs, style) with PlayableAsset with ImageLayoutAssetPart {
   def this(context: Context, attrs: AttributeSet) = this(context, attrs, 0)
   def this(context: Context) = this(context, null, 0)
-  import Threading.Implicits.Ui
 
   override val tpe: MsgPart = MsgPart.VideoAsset
 
@@ -56,22 +54,11 @@ class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) exte
 
   bg.on(Threading.Ui) { setBackground }
 
-  actionReady.on(Threading.Ui) {
-    case true =>
-      assetActionButton.onClick {
-        for {
-          id <- assetId.head
-          as <- zms.map(_.assets).head
-          mime <- asset.map(_._1.mime).head
-        } {
-          as.getContentUri(id).foreach {
-            case Some(uri) =>
-              val intent = AssetUtils.getOpenFileIntent(uri, mime.orDefault.str)
-              context.startActivity(intent)
-            case _ =>
-          }(Threading.Ui)
-        }
-      }
-    case _ =>
+  asset.disableAutowiring()
+
+  assetActionButton.onClicked.filter(_ == DeliveryState.Complete) { _ =>
+    asset.currentValue foreach { case (a, _) =>
+      controller.openFile(a, showDialog = false)
+    }
   }
 }

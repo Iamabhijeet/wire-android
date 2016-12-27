@@ -20,7 +20,10 @@ package com.waz.zclient.messages.parts
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
+import com.waz.zclient.controllers.AssetsController
 import com.waz.zclient.messages.MsgPart
+import com.waz.zclient.messages.parts.assets.ImageLayoutAssetPart
+import com.waz.zclient.utils._
 
 class ImagePartView(context: Context, attrs: AttributeSet, style: Int) extends View(context, attrs, style) with ImageLayoutAssetPart {
   def this(context: Context, attrs: AttributeSet) = this(context, attrs, 0)
@@ -29,4 +32,10 @@ class ImagePartView(context: Context, attrs: AttributeSet, style: Int) extends V
   override val tpe: MsgPart = MsgPart.Image
 
   setBackground(imageDrawable)
+
+  this.onClick {
+    message.currentValue foreach { msg =>
+      inject[AssetsController].showSingleImage(msg, this)
+    }
+  }
 }

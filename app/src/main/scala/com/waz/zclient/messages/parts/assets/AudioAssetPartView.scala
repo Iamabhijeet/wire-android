@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.waz.zclient.messages.parts
+package com.waz.zclient.messages.parts.assets
 
 import android.content.Context
 import android.util.AttributeSet
@@ -25,7 +25,7 @@ import com.waz.threading.Threading
 import com.waz.zclient.R
 import com.waz.zclient.controllers.global.AccentColorController
 import com.waz.zclient.messages.MsgPart
-import com.waz.zclient.utils.{RichSeekBar, RichView}
+import com.waz.zclient.utils.RichSeekBar
 import org.threeten.bp.Duration
 
 class AudioAssetPartView(context: Context, attrs: AttributeSet, style: Int) extends FrameLayout(context, attrs, style) with PlayableAsset {
@@ -43,28 +43,25 @@ class AudioAssetPartView(context: Context, attrs: AttributeSet, style: Int) exte
 
   accentColorController.accentColor.map(_.getColor).on(Threading.Ui)(progressBar.setColor)
 
-  val playControls = assets.getPlaybackControls(asset.map(_._1))
+  val playControls = controller.getPlaybackControls(asset.map(_._1))
 
   duration.map(_.toMillis.toInt).on(Threading.Ui)(progressBar.setMax)
   playControls.flatMap(_.playHead).map(_.toMillis.toInt).on(Threading.Ui)(progressBar.setProgress)
 
-  actionReady.on(Threading.Ui) {
-    case true =>
-      progressBar.setEnabled(true)
-      assetActionButton.listenToPlayState(playControls.flatMap(_.isPlaying))
-      assetActionButton.onClick {
-        playControls.currentValue.foreach(_.playOrPause())
-      }
+  playControls.flatMap(_.isPlaying) { assetActionButton.isPlaying ! _ }
 
-      progressBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener {
-        override def onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean): Unit =
-          if (fromUser) playControls.currentValue.foreach(_.setPlayHead(Duration.ofMillis(progress)))
-
-        override def onStopTrackingTouch(seekBar: SeekBar): Unit = ()
-
-        override def onStartTrackingTouch(seekBar: SeekBar): Unit = ()
-      })
-
-    case false => progressBar.setEnabled(false)
+  assetActionButton.onClicked.filter(_ == DeliveryState.Complete) { _ =>
+    playControls.currentValue.foreach(_.playOrPause())
   }
+
+  completed.on(Threading.Ui) { progressBar.setEnabled }
+
+  progressBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener {
+    override def onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean): Unit =
+      if (fromUser) playControls.currentValue.foreach(_.setPlayHead(Duration.ofMillis(progress)))
+
+    override def onStopTrackingTouch(seekBar: SeekBar): Unit = ()
+
+    override def onStartTrackingTouch(seekBar: SeekBar): Unit = ()
+  })
 }
