@@ -23,7 +23,6 @@ import com.waz.zclient.core.stores.connect.IConnectStore;
 import com.waz.zclient.core.stores.conversation.IConversationStore;
 import com.waz.zclient.core.stores.draft.IDraftStore;
 import com.waz.zclient.core.stores.inappnotification.IInAppNotificationStore;
-import com.waz.zclient.core.stores.media.IMediaStore;
 import com.waz.zclient.core.stores.network.INetworkStore;
 import com.waz.zclient.core.stores.participants.IParticipantsStore;
 import com.waz.zclient.core.stores.pickuser.IPickUserStore;
@@ -44,7 +43,6 @@ public abstract class StoreFactory implements IStoreFactory {
     protected IAppEntryStore appEntryStore;
     protected IConnectStore connectStore;
     protected IDraftStore draftStore;
-    protected IMediaStore mediaStore;
     protected IZMessagingApiStore zMessagingApiStore;
     protected INetworkStore networkStore;
     private boolean isTornDown;
@@ -68,8 +66,6 @@ public abstract class StoreFactory implements IStoreFactory {
     protected abstract IConnectStore createConnectStore();
 
     protected abstract IDraftStore createDraftStore();
-
-    protected abstract IMediaStore createMediaStore();
 
     protected abstract INetworkStore createNetworkStore();
 
@@ -176,15 +172,6 @@ public abstract class StoreFactory implements IStoreFactory {
     }
 
     @Override
-    public IMediaStore getMediaStore() {
-        verifyLifecycle();
-        if (mediaStore == null) {
-            mediaStore = createMediaStore();
-        }
-        return mediaStore;
-    }
-
-    @Override
     public INetworkStore getNetworkStore() {
         verifyLifecycle();
         if (networkStore == null) {
@@ -233,11 +220,6 @@ public abstract class StoreFactory implements IStoreFactory {
         if (draftStore != null) {
             draftStore.tearDown();
             draftStore = null;
-        }
-
-        if (mediaStore != null) {
-            mediaStore.tearDown();
-            mediaStore = null;
         }
 
         if (networkStore != null) {

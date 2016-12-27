@@ -61,8 +61,6 @@ public interface IStoreFactory {
     /* stores started messages */
     IDraftStore getDraftStore();
 
-    IMediaStore getMediaStore();
-
     IZMessagingApiStore getZMessagingApiStore();
 
     INetworkStore getNetworkStore();

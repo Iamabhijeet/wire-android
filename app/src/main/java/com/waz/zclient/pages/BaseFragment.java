@@ -19,6 +19,7 @@ package com.waz.zclient.pages;
 
 import android.app.Activity;
 import android.support.v4.app.Fragment;
+import com.waz.zclient.BaseScalaActivity;
 import com.waz.zclient.ServiceContainer;
 import com.waz.zclient.controllers.IControllerFactory;
 import com.waz.zclient.core.stores.IStoreFactory;
@@ -68,5 +69,14 @@ public class BaseFragment<T> extends Fragment implements ServiceContainer {
     @Override
     public final IControllerFactory getControllerFactory() {
         return controllerFactory;
+    }
+
+    public <A> A inject(Class<A> dependencyClass) {
+        BaseScalaActivity activity = (BaseScalaActivity) getActivity();
+        if (activity != null) {
+            return activity.injectJava(dependencyClass);
+        } else {
+            return null;
+        }
     }
 }

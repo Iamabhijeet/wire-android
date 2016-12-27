@@ -72,6 +72,7 @@ import com.waz.zclient.core.stores.conversation.InboxLoadRequester;
 import com.waz.zclient.core.stores.conversation.OnInboxLoadedListener;
 import com.waz.zclient.core.stores.inappnotification.InAppNotificationStoreObserver;
 import com.waz.zclient.core.stores.inappnotification.KnockingEvent;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.newreg.fragments.FirstTimeAssignUsernameFragment;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.main.connect.BlockedUserProfileFragment;
@@ -1052,8 +1053,10 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
         getControllerFactory().getConfirmationController().requestConfirmation(request,
                                                                                IConfirmationController.CONVERSATION_LIST);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     public void callConversation(final IConversation conversation) {
@@ -1129,8 +1132,10 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
         getControllerFactory().getConfirmationController().requestConfirmation(request,
                                                                                IConfirmationController.CONVERSATION_LIST);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
 
@@ -1183,8 +1188,10 @@ public class ConversationListManagerFragment extends BaseFragment<ConversationLi
         getControllerFactory().getConfirmationController().requestConfirmation(request,
                                                                                IConfirmationController.CONVERSATION_LIST);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     @Override

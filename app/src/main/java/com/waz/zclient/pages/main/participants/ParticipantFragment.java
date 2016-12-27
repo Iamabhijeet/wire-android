@@ -65,6 +65,7 @@ import com.waz.zclient.core.stores.conversation.ConversationChangeRequester;
 import com.waz.zclient.core.stores.conversation.ConversationStoreObserver;
 import com.waz.zclient.core.stores.conversation.OnConversationLoadedListener;
 import com.waz.zclient.core.stores.participants.ParticipantsStoreObserver;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.main.connect.BlockedUserProfileFragment;
 import com.waz.zclient.pages.main.connect.ConnectRequestLoadMode;
@@ -455,9 +456,10 @@ public class ParticipantFragment extends BaseFragment<ParticipantFragment.Contai
 
         getControllerFactory().getConfirmationController().requestConfirmation(request, IConfirmationController.PARTICIPANTS);
 
-
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     public void deleteConversation(final IConversation conversation) {
@@ -525,8 +527,10 @@ public class ParticipantFragment extends BaseFragment<ParticipantFragment.Contai
 
         getControllerFactory().getConfirmationController().requestConfirmation(builder.build(), IConfirmationController.PARTICIPANTS);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     public void toggleArchiveConversation(final IConversation conversation, final boolean archive) {
@@ -942,9 +946,10 @@ public class ParticipantFragment extends BaseFragment<ParticipantFragment.Contai
 
         getControllerFactory().getConfirmationController().requestConfirmation(request, IConfirmationController.PARTICIPANTS);
 
-
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     @Override
@@ -1235,8 +1240,10 @@ public class ParticipantFragment extends BaseFragment<ParticipantFragment.Contai
 
         getControllerFactory().getConfirmationController().requestConfirmation(request, IConfirmationController.PARTICIPANTS);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     public interface Container {

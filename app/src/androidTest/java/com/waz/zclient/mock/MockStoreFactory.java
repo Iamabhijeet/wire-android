@@ -24,7 +24,6 @@ import com.waz.zclient.core.stores.connect.IConnectStore;
 import com.waz.zclient.core.stores.conversation.IConversationStore;
 import com.waz.zclient.core.stores.draft.IDraftStore;
 import com.waz.zclient.core.stores.inappnotification.IInAppNotificationStore;
-import com.waz.zclient.core.stores.media.IMediaStore;
 import com.waz.zclient.core.stores.network.INetworkStore;
 import com.waz.zclient.core.stores.participants.IParticipantsStore;
 import com.waz.zclient.core.stores.pickuser.IPickUserStore;
@@ -35,7 +34,6 @@ import com.waz.zclient.core.stores.stub.StubConnectStore;
 import com.waz.zclient.core.stores.stub.StubConversationStore;
 import com.waz.zclient.core.stores.stub.StubDraftStore;
 import com.waz.zclient.core.stores.stub.StubInAppNotificationStore;
-import com.waz.zclient.core.stores.stub.StubMediaStore;
 import com.waz.zclient.core.stores.stub.StubNetworkStore;
 import com.waz.zclient.core.stores.stub.StubParticipantsStore;
 import com.waz.zclient.core.stores.stub.StubPickUserStore;
@@ -57,8 +55,6 @@ public class MockStoreFactory implements IStoreFactory {
   protected IDraftStore draftStore = spy(StubDraftStore.class);
 
   protected IInAppNotificationStore inAppNotificationStore = spy(StubInAppNotificationStore.class);
-
-  protected IMediaStore mediaStore = spy(StubMediaStore.class);
 
   protected INetworkStore networkStore = spy(StubNetworkStore.class);
 
@@ -108,11 +104,6 @@ public class MockStoreFactory implements IStoreFactory {
   @Override
   public IInAppNotificationStore getInAppNotificationStore() {
     return inAppNotificationStore;
-  }
-
-  @Override
-  public IMediaStore getMediaStore() {
-    return mediaStore;
   }
 
   @Override

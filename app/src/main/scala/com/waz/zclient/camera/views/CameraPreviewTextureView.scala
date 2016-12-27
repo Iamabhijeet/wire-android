@@ -29,8 +29,9 @@ import com.waz.threading.CancellableFuture.CancelException
 import com.waz.threading.Threading
 import com.waz.utils.returning
 import com.waz.zclient.camera._
-import com.waz.zclient.camera.controllers.{PreviewSize, Orientation, GlobalCameraController}
+import com.waz.zclient.camera.controllers.{GlobalCameraController, Orientation, PreviewSize}
 import com.waz.zclient.common.controllers.{CameraPermission, PermissionsController}
+import com.waz.zclient.media.SoundController
 import com.waz.zclient.{R, ViewHelper}
 import timber.log.Timber
 
@@ -46,9 +47,8 @@ class CameraPreviewTextureView(val context: Context, val attrs: AttributeSet, va
   def this(context: Context) = this(context, null)
 
   private val controller = inject[GlobalCameraController]
-  private val vibrator = Option(inject[Vibrator])
-  private val mediaManager = Option(inject[MediaManagerService]).flatMap(_.mediaManager)
   private val permissionsController = Option(inject[PermissionsController])
+  private val soundController = inject[SoundController]
 
   private var currentTexture = Option.empty[(SurfaceTexture, Int, Int)]
 
@@ -68,9 +68,7 @@ class CameraPreviewTextureView(val context: Context, val attrs: AttributeSet, va
   }
 
   def takePicture() = controller.takePicture {
-    val disableRepeat = -1
-    vibrator.foreach(_.vibrate(context.getResources.getIntArray(R.array.camera).map(_.toLong), disableRepeat))
-    mediaManager.foreach(_.playMedia(context.getResources.getResourceEntryName(R.raw.camera)))
+    soundController.playCameraShutterSound()
   }.onComplete {
     case Success(data) => observer.foreach {
       _.onPictureTaken {

@@ -49,6 +49,7 @@ import com.waz.zclient.core.stores.connect.IConnectStore;
 import com.waz.zclient.core.stores.conversation.ConversationChangeRequester;
 import com.waz.zclient.core.stores.network.NetworkAction;
 import com.waz.zclient.core.stores.participants.ParticipantsStoreObserver;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.main.conversation.controller.ConversationScreenControllerObserver;
 import com.waz.zclient.pages.main.conversation.controller.IConversationScreenController;
@@ -678,8 +679,10 @@ public class ParticipantBodyFragment extends BaseFragment<ParticipantBodyFragmen
 
         getControllerFactory().getConfirmationController().requestConfirmation(request, IConfirmationController.PARTICIPANTS);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     public interface Container {

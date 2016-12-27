@@ -27,6 +27,7 @@ import android.support.v7.preference.PreferenceManager;
 import android.support.v7.preference.XpPreferenceFragment;
 import android.text.TextUtils;
 import android.view.View;
+import com.waz.zclient.BaseScalaActivity;
 import com.waz.zclient.ServiceContainer;
 import com.waz.zclient.ZApplication;
 import com.waz.zclient.controllers.IControllerFactory;
@@ -126,5 +127,14 @@ public abstract class BasePreferenceFragment<T> extends XpPreferenceFragment imp
 
     public Event handlePreferenceChanged(SharedPreferences sharedPreferences, String key) {
         return null;
+    }
+
+    public <A> A inject(Class<A> dependencyClass) {
+        BaseScalaActivity activity = (BaseScalaActivity) getActivity();
+        if (activity != null) {
+            return activity.injectJava(dependencyClass);
+        } else {
+            return null;
+        }
     }
 }

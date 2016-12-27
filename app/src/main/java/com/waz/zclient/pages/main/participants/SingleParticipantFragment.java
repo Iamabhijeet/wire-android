@@ -40,6 +40,7 @@ import com.waz.zclient.core.stores.connect.IConnectStore;
 import com.waz.zclient.core.stores.conversation.ConversationChangeRequester;
 import com.waz.zclient.core.stores.network.NetworkAction;
 import com.waz.zclient.core.stores.singleparticipants.SingleParticipantStoreObserver;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.main.connect.UserProfile;
 import com.waz.zclient.pages.main.connect.UserProfileContainer;
@@ -381,8 +382,10 @@ public class SingleParticipantFragment extends BaseFragment<SingleParticipantFra
 
         getControllerFactory().getConfirmationController().requestConfirmation(request, IConfirmationController.USER_PROFILE);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     @Override

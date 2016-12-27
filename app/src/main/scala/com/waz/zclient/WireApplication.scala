@@ -28,6 +28,7 @@ import com.waz.zclient.camera.controllers.{AndroidCameraFactory, GlobalCameraCon
 import com.waz.zclient.common.controllers.{PermissionActivity, PermissionsController, PermissionsWrapper}
 import com.waz.zclient.controllers.{DefaultControllerFactory, IControllerFactory}
 import com.waz.zclient.core.stores.IStoreFactory
+import com.waz.zclient.media.SoundController
 import com.waz.zclient.notifications.controllers.{CallingNotificationsController, ImageNotificationsController, MessageNotificationsController}
 import com.waz.zclient.utils.{BackendPicker, BuildConfigUtils, Callback}
 
@@ -44,6 +45,7 @@ object WireApplication {
     bind[GlobalCallingController] to new GlobalCallingController(inject[Context])
     bind[GlobalCameraController] to new GlobalCameraController(inject[Context], new AndroidCameraFactory)(EventContext.Global)
     bind[MediaManagerService] to ZMessaging.currentGlobal.mediaManager
+    bind[SoundController] to new SoundController
 
     //notifications
     bind[MessageNotificationsController] to new MessageNotificationsController()

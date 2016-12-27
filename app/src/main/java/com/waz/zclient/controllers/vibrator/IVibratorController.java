@@ -17,20 +17,11 @@
  */
 package com.waz.zclient.controllers.vibrator;
 
-import android.support.annotation.ArrayRes;
 import android.support.annotation.NonNull;
 
 public interface IVibratorController {
 
     void tearDown();
 
-    void vibrate(@ArrayRes int pattern);
-
     void vibrate(@NonNull long[] pattern);
-
-    void vibrate(@ArrayRes int pattern, boolean loop);
-
-    void vibrate(@NonNull long[] pattern, boolean loop);
-
-    void stopVibrate();
 }

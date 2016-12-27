@@ -36,6 +36,7 @@ import com.waz.zclient.core.stores.conversation.ConversationChangeRequester;
 import com.waz.zclient.core.stores.conversation.OnConversationLoadedListener;
 import com.waz.zclient.core.stores.inappnotification.InAppNotificationStoreObserver;
 import com.waz.zclient.core.stores.inappnotification.KnockingEvent;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.main.conversationlist.ConfirmationFragment;
 import com.waz.zclient.ui.utils.MathUtils;
@@ -128,24 +129,24 @@ public class InAppNotificationFragment extends BaseFragment<InAppNotificationFra
 
         // Play sound for incoming connect request
         if (message.getMessageType() == Message.Type.CONNECT_REQUEST &&
-            message.getConversation().getType() == IConversation.Type.INCOMING_CONNECTION) {
-            getStoreFactory().getMediaStore().playSound(R.raw.first_message);
-        } else if (message.getMessageType() == Message.Type.TEXT ||
-                   message.getMessageType() == Message.Type.ASSET ||
-                   message.getMessageType() == Message.Type.RICH_MEDIA) {
-            if (message.isFirstMessage()) {
-                getStoreFactory().getMediaStore().playSound(R.raw.first_message);
-            } else {
-                getStoreFactory().getMediaStore().playSound(R.raw.new_message);
+            message.getConversation().getType() == IConversation.Type.INCOMING_CONNECTION ||
+            message.getMessageType() == Message.Type.TEXT ||
+            message.getMessageType() == Message.Type.ASSET ||
+            message.getMessageType() == Message.Type.RICH_MEDIA) {
+
+            SoundController ctrl = inject(SoundController.class);
+            if (ctrl != null) {
+                ctrl.playMessageIncomingSound(message.isFirstMessage());
             }
         }
-        getControllerFactory().getVibratorController().vibrate(R.array.new_message);
     }
 
     @Override
     public void onIncomingKnock(KnockingEvent knock) {
-        getStoreFactory().getMediaStore().playSound(R.raw.ping_from_them);
-        getControllerFactory().getVibratorController().vibrate(R.array.ping_from_them);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playPingFromThem();
+        }
     }
 
     @Override

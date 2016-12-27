@@ -37,6 +37,7 @@ import com.waz.zclient.core.controllers.tracking.events.Event;
 import com.waz.zclient.core.controllers.tracking.events.settings.ChangedContactsPermissionEvent;
 import com.waz.zclient.core.controllers.tracking.events.settings.ChangedSendButtonSettingEvent;
 import com.waz.zclient.core.controllers.tracking.events.settings.ChangedThemeEvent;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.pages.BasePreferenceFragment;
 import com.waz.zclient.pages.main.profile.preferences.dialogs.WireRingtonePreferenceDialogFragment;
 import com.waz.zclient.utils.LayoutSpec;
@@ -188,7 +189,11 @@ public class OptionsPreferences extends BasePreferenceFragment<OptionsPreference
         } else if (key.equals(ringtonePreference.getKey()) ||
                    key.equals(textTonePreference.getKey()) ||
                    key.equals(pingPreference.getKey())) {
-            getStoreFactory().getMediaStore().setCustomSoundUrisFromPreferences(sharedPreferences);
+
+            SoundController ctrl = inject(SoundController.class);
+            if (ctrl != null) {
+                ctrl.setCustomSoundUrisFromPreferences(sharedPreferences);
+            }
         } else if (key.equals(getString(R.string.pref_options_image_download_key))) {
             String stringValue = sharedPreferences.getString(key, "");
             boolean wifiOnly = stringValue.equals(getContext().getString(R.string.zms_image_download_value_wifi));

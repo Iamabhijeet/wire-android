@@ -34,6 +34,7 @@ import com.waz.zclient.controllers.tracking.events.conversation.ArchivedConversa
 import com.waz.zclient.controllers.tracking.events.conversation.UnarchivedConversationEvent;
 import com.waz.zclient.core.stores.network.NetworkAction;
 import com.waz.zclient.controllers.tracking.events.connect.BlockingEvent;
+import com.waz.zclient.media.SoundController;
 import com.waz.zclient.pages.main.participants.OptionsMenuControl;
 import com.waz.zclient.core.stores.connect.IConnectStore;
 import com.waz.zclient.core.stores.conversation.ConversationChangeRequester;
@@ -265,8 +266,10 @@ public class PendingConnectRequestManagerFragment extends BaseFragment<PendingCo
 
         getControllerFactory().getConfirmationController().requestConfirmation(request, IConfirmationController.USER_PROFILE);
 
-        getStoreFactory().getMediaStore().playSound(R.raw.alert);
-        getControllerFactory().getVibratorController().vibrate(R.array.alert);
+        SoundController ctrl = inject(SoundController.class);
+        if (ctrl != null) {
+            ctrl.playAlert();
+        }
     }
 
     @Override

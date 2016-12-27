@@ -29,14 +29,12 @@ import com.waz.zclient.controllers.userpreferences.UserPreferencesController;
 
 public class VibratorController implements IVibratorController {
 
-    private Resources resources;
     private Vibrator vibrator;
     private AudioManager audioManager;
     private Context context;
 
     public VibratorController(Context context) {
         this.context = context;
-        this.resources = context.getResources();
         this.vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     }
@@ -44,29 +42,14 @@ public class VibratorController implements IVibratorController {
     @Override
     public void tearDown() {
         context = null;
-        resources = null;
         audioManager = null;
         vibrator = null;
     }
 
-    @Override
-    public void vibrate(@ArrayRes int patternRes) {
-        vibrate(patternRes, false);
-    }
 
+    //TODO remove this class when vibrate method can be moved to SoundController
     @Override
     public void vibrate(@NonNull long[] pattern) {
-        vibrate(pattern, false);
-    }
-
-    @Override
-    public void vibrate(@ArrayRes int patternRes, boolean loop) {
-        long[] longArray = resolveResource(resources, patternRes);
-        vibrate(longArray, loop);
-    }
-
-    @Override
-    public void vibrate(@NonNull long[] pattern, boolean loop) {
         if (audioManager.getRingerMode() == AudioManager.RINGER_MODE_SILENT ||
             !vibrator.hasVibrator()) {
             return;
@@ -74,14 +57,10 @@ public class VibratorController implements IVibratorController {
         if (!isEnabledInPreferences(context)) {
             return;
         }
-        stopVibrate();
-        vibrator.vibrate(pattern, loop ? 0 : -1);
+        vibrator.cancel();
+        vibrator.vibrate(pattern, -1);
     }
 
-    @Override
-    public void stopVibrate() {
-        vibrator.cancel();
-    }
 
     @SuppressWarnings("PMD.AvoidArrayLoops")
     public static long[] resolveResource(Resources resources, @ArrayRes int resId) {
