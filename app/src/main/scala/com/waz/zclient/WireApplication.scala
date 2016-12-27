@@ -25,15 +25,15 @@ import com.waz.zclient.api.scala.ScalaStoreFactory
 import com.waz.zclient.calling.controllers.{CallPermissionsController, CurrentCallController, GlobalCallingController}
 import com.waz.zclient.camera.controllers.{AndroidCameraFactory, GlobalCameraController}
 import com.waz.zclient.common.controllers.{PermissionActivity, PermissionsController, PermissionsWrapper}
+import com.waz.zclient.controllers._
 import com.waz.zclient.controllers.global.{AccentColorController, KeyboardController, SelectionController}
 import com.waz.zclient.controllers.navigation.INavigationController
+import com.waz.zclient.controllers.singleimage.ISingleImageController
 import com.waz.zclient.controllers.theme.IThemeController
 import com.waz.zclient.controllers.tracking.ITrackingController
 import com.waz.zclient.controllers.userpreferences.IUserPreferencesController
-import com.waz.zclient.controllers.{BrowserController, DefaultControllerFactory, IControllerFactory, ScreenController}
 import com.waz.zclient.core.stores.IStoreFactory
 import com.waz.zclient.messages.controllers.{MessageActionsController, NavigationController}
-import com.waz.zclient.messages.parts.AssetController
 import com.waz.zclient.messages.{MessageViewFactory, MessagesController, SyncEngineSignals}
 import com.waz.zclient.notifications.controllers.{CallingNotificationsController, ImageNotificationsController, MessageNotificationsController}
 import com.waz.zclient.pages.main.conversation.controller.IConversationScreenController
@@ -67,6 +67,7 @@ object WireApplication {
     bind [IUserPreferencesController]    toProvider controllerFactory.getUserPreferencesController
     bind [ITrackingController]           toProvider controllerFactory.getTrackingController
     bind [IConversationScreenController] toProvider controllerFactory.getConversationScreenController
+    bind [ISingleImageController]        toProvider controllerFactory.getSingleImageController
 
     // global controllers
     bind [AccentColorController]   to new AccentColorController()
@@ -93,7 +94,7 @@ object WireApplication {
     bind [CurrentCallController]     to new CurrentCallController()
     bind [CallPermissionsController] to new CallPermissionsController()
     bind [ImageController]           to new ImageController()
-    bind [AssetController]           to new AssetController()
+    bind [AssetsController]          to new AssetsController()
     bind [BrowserController]         to new BrowserController()
     bind [MessageViewFactory]        to new MessageViewFactory()
     bind [PermissionActivity]        to ctx.asInstanceOf[PermissionActivity]

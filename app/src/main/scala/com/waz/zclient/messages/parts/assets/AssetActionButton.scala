@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.waz.zclient.views
+package com.waz.zclient.messages.parts.assets
 
 import java.util.Locale
 
@@ -27,58 +27,74 @@ import com.waz.api.impl.ProgressIndicator.ProgressData
 import com.waz.model.MessageData
 import com.waz.service.ZMessaging
 import com.waz.threading.Threading
-import com.waz.utils.events.{EventContext, Signal}
+import com.waz.utils.events.{EventStream, EventContext, Signal}
+import com.waz.zclient.controllers.AssetsController
 import com.waz.zclient.controllers.global.AccentColorController
-import com.waz.zclient.messages.parts.DeliveryState._
-import com.waz.zclient.messages.parts.{AssetController, DeliveryState}
+import DeliveryState._
 import com.waz.zclient.ui.utils.TypefaceUtils
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.RichView
+import com.waz.zclient.views.GlyphProgressView
 import com.waz.zclient.{R, ViewHelper}
 
-//TODO rename when old button is deleted
-class AssetActionButtonNew(context: Context, attrs: AttributeSet, style: Int) extends GlyphProgressView(context, attrs, style) with ViewHelper {
+class AssetActionButton(context: Context, attrs: AttributeSet, style: Int) extends GlyphProgressView(context, attrs, style) with ViewHelper {
   def this(context: Context, attrs: AttributeSet) = this(context, attrs, 0)
   def this(context: Context) = this(context, null, 0)
 
   private val isFileType = withStyledAttributes(attrs, R.styleable.AssetActionButton) { _.getBoolean(R.styleable.AssetActionButton_isFileType, false) }
 
   val zms = inject[Signal[ZMessaging]]
-  val assetService = inject[AssetController]
+  val assets = inject[AssetsController]
   val message = Signal[MessageData]()
   val accentController = inject[AccentColorController]
 
-  val asset = assetService.assetSignal(message)
+  val asset = assets.assetSignal(message)
   val deliveryState = DeliveryState(message, asset)
-  private val normalButtonDrawable = getDrawable(R.drawable.selector__icon_button__background__video_message)
 
+  val isPlaying = Signal(false)
+
+  val onClicked = EventStream[DeliveryState]
+
+  private val normalButtonDrawable = getDrawable(R.drawable.selector__icon_button__background__video_message)
   private val errorButtonDrawable = getDrawable(R.drawable.selector__icon_button__background__video_message__error)
   private val onCompletedDrawable = if (isFileType) new FileDrawable(asset.map(_._1.mime.extension)) else normalButtonDrawable
 
   accentController.accentColor.map(_.getColor).on(Threading.Ui)(setProgressColor)
 
-  deliveryState.map {
-    case Complete => (if (isFileType) 0 else R.string.glyph__play, onCompletedDrawable)
-    case Uploading |
-         Downloading => (R.string.glyph__close, normalButtonDrawable)
-    case _: Failed | Cancelled => (R.string.glyph__redo, errorButtonDrawable)
-    case _ => (0, null)
-  }.on(Threading.Ui) {
-    case (action, drawable) =>
-      setText(if (action == 0) "" else getString(action))
-      setBackground(drawable)
+  private val text = deliveryState flatMap {
+    case Complete if !isFileType  =>
+      isPlaying map {
+        case true => R.string.glyph__pause
+        case false => R.string.glyph__play
+      }
+    case Uploading | Downloading  => Signal const R.string.glyph__close
+    case _: Failed | Cancelled    => Signal const R.string.glyph__redo
+    case _                        => Signal const 0
+  } map {
+    case 0 => ""
+    case resId => getString(resId)
   }
 
-  def listenToPlayState(isPlaying: Signal[Boolean]): Unit = isPlaying.map {
-    case true => R.string.glyph__pause
-    case false => R.string.glyph__play
-  }.map(getString).on(Threading.Ui)(setText)
+  private val drawable = deliveryState.map {
+    case Complete                 => onCompletedDrawable
+    case Uploading | Downloading  => normalButtonDrawable
+    case _: Failed | Cancelled    => errorButtonDrawable
+    case _                        => null
+  }
 
-  deliveryState.zip(message.map(_.assetId)).flatMap {
-    case (Uploading, id) => assetService.uploadProgress(id).map(Option(_))
-    case (Downloading, id) => assetService.downloadProgress(id).map(Option(_))
-    case _ => Signal.const[Option[ProgressData]](None)
-  }.on(Threading.Ui) {
+  private val progress = for {
+    assetId <- message.map(_.assetId)
+    state <- deliveryState flatMap {
+      case Uploading => assets.uploadProgress(assetId).map(Option(_))
+      case Downloading => assets.downloadProgress(assetId).map(Option(_))
+      case _ => Signal const Option.empty[ProgressData]
+    }
+  } yield state
+
+  text.on(Threading.Ui) { setText }
+  drawable.on(Threading.Ui) { setBackground }
+
+  progress.on(Threading.Ui) {
     case Some(p) =>
       import com.waz.api.ProgressIndicator.State._
       p.state match {
@@ -90,32 +106,26 @@ class AssetActionButtonNew(context: Context, attrs: AttributeSet, style: Int) ex
     case _ => clearProgress()
   }
 
-  deliveryState.map { case Complete => false; case _ => true }.on(Threading.Ui) {
-    //only want to set the onClick listener if NOT completed
-    case true =>
-      this.onClick {
-        deliveryState.currentValue.foreach {
-          case UploadFailed => message.currentValue.foreach(assetService.retry)
-          case Uploading => message.currentValue.foreach(assetService.cancelUpload)
-          case Downloading => message.currentValue.foreach(assetService.cancelDownload)
-          case _ => //
-        }
-      }
-    case false => //do nothing, individual view parts will handle what happens when in the Completed state.
+  this.onClick {
+    deliveryState.currentValue.foreach { onClicked ! _ }
   }
 
+  onClicked {
+    case UploadFailed => message.currentValue.foreach(assets.retry)
+    case Uploading    => message.currentValue.foreach(assets.cancelUpload)
+    case Downloading  => message.currentValue.foreach(assets.cancelDownload)
+    case _ => // do nothing, individual view parts will handle what happens when in the Completed state.
+  }
 }
 
 protected class FileDrawable(ext: Signal[String])(implicit context: Context, cxt: EventContext) extends Drawable {
-
-  ext.onChanged.on(Threading.Ui) { _ =>
-    invalidateSelf()
-  }
 
   private final val textCorrectionSpacing = getDimenPx(R.dimen.wire__padding__4)
   private final val fileGlyph = getString(R.string.glyph__file)
   private final val glyphPaint = new Paint
   private final val textPaint = new Paint
+
+  private var extension = ""
 
   glyphPaint.setTypeface(TypefaceUtils.getTypeface(TypefaceUtils.getGlyphsTypefaceName))
   glyphPaint.setColor(getColor(R.color.black_48))
@@ -128,9 +138,14 @@ protected class FileDrawable(ext: Signal[String])(implicit context: Context, cxt
   textPaint.setTextAlign(Paint.Align.CENTER)
   textPaint.setTextSize(getDimenPx(R.dimen.wire__text_size__tiny))
 
+  ext.on(Threading.Ui) { ex =>
+    extension = ex.toUpperCase(Locale.getDefault)
+    invalidateSelf()
+  }
+
   override def draw(canvas: Canvas): Unit = {
     canvas.drawText(fileGlyph, getBounds.width / 2, getBounds.height, glyphPaint)
-    ext.currentValue.foreach { ex => canvas.drawText(ex.toUpperCase(Locale.getDefault), getBounds.width / 2, getBounds.height - textCorrectionSpacing, textPaint) }
+    canvas.drawText(extension, getBounds.width / 2, getBounds.height - textCorrectionSpacing, textPaint)
   }
 
   override def setColorFilter(colorFilter: ColorFilter): Unit = {

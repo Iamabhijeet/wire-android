@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.waz.zclient.views
+package com.waz.zclient.messages.parts.assets
 
 import android.graphics._
 import android.graphics.drawable.Drawable
@@ -23,6 +23,7 @@ import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.ViewUtils
+import com.waz.zclient.views.ProgressDotsDrawable
 import com.waz.zclient.{R, WireContext}
 
 class AssetBackground(showDots: Signal[Boolean])(implicit context: WireContext, eventContext: EventContext) extends Drawable with Drawable.Callback {
@@ -34,11 +35,16 @@ class AssetBackground(showDots: Signal[Boolean])(implicit context: WireContext, 
   private val dots = new ProgressDotsDrawable
   dots.setCallback(this)
 
-  showDots.onChanged.on(Threading.Ui)(_ => invalidateSelf())
+  private var show = false
+
+  showDots.on(Threading.Ui) { s =>
+    show = s
+    invalidateSelf()
+  }
 
   override def draw(canvas: Canvas): Unit = {
     canvas.drawRoundRect(new RectF(getBounds), cornerRadius, cornerRadius, backgroundPaint)
-    if (showDots.currentValue.getOrElse(false)) dots.draw(canvas)
+    if (show) dots.draw(canvas)
   }
 
   override def setColorFilter(colorFilter: ColorFilter): Unit = {
