@@ -49,11 +49,6 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   private var _isV3Call = false
   isV3Call(_isV3Call = _)
 
-  val v3ServiceAndCurrentConvId = for {
-    svc <- v3Service
-    c <- convId
-  } yield (svc, c)
-
   private var _v3ServiceAndCurrentConvId = Option.empty[(CallingService, ConvId)]
   v3ServiceAndCurrentConvId(v => _v3ServiceAndCurrentConvId = Some(v))
 
@@ -72,8 +67,11 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     case _ => currentChannel map (_.video.videoSendState)
   }
 
+  val flowManager = zms map (_.flowmanager)
+
+  //TODO I don't think v2 needs to keep track of this state, might be able to use FM directly for both
   val captureDevices = isV3Call.flatMap {
-    case true => Signal.const(Vector.empty[CaptureDeviceData])
+    case true => flowManager.flatMap(fm => Signal.future(fm.getVideoCaptureDevices))
     case _ => currentChannel map (_.video.captureDevices)
   }
 
@@ -85,8 +83,16 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     case _ => None
   }
 
-  voiceServiceAndCurrentConvId.zip(currentCaptureDevice) {
-    case ((vcs, convId), Some(dev)) => vcs.setVideoCaptureDevice(convId, dev.id)
+  (for {
+    isV3 <- isV3Call
+    fm <- flowManager
+    v2 <- v2Service
+    conv <- conversation
+    device <- currentCaptureDevice
+  } yield (isV3, fm, v2, conv, device)) {
+    case (isV3, fm, v2, conv, Some(currentDevice)) =>
+      if (isV3) fm.setVideoCaptureDevice(conv.remoteId, currentDevice.id)
+      else v2.setVideoCaptureDevice(conv.id, currentDevice.id) //need to be set through service for voice channel state
     case _ =>
   }
 
@@ -151,8 +157,6 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     }
   }
 
-  val flowManager = zms map (_.flowmanager)
-
   val avsStateAndChangeReason = flowManager.flatMap(_.stateOfReceivedVideo)
   val cameraFailed = flowManager.flatMap(_.cameraFailedSig)
 
@@ -208,7 +212,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   //Set the following signals to keep track of updates as the following methods rely on their values
-  voiceServiceAndCurrentConvId.disableAutowiring()
+  v2ServiceAndCurrentConvId.disableAutowiring()
   videoCall.disableAutowiring()
   muted.disableAutowiring()
   videoSendState.disableAutowiring()
@@ -219,7 +223,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     if (_isV3Call) _v3ServiceAndCurrentConvId.foreach {
       case (cs, id) => cs.endCall(id)
     }
-    else voiceServiceAndCurrentConvId.currentValue.foreach {
+    else v2ServiceAndCurrentConvId.currentValue.foreach {
       case (vcs, id) => vcs.silenceVoiceChannel(id)
     }
   }
@@ -229,7 +233,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     if (_isV3Call) _v3ServiceAndCurrentConvId.foreach {
       case (cs, id) => cs.endCall(id)
     }
-    else voiceServiceAndCurrentConvId.currentValue.foreach {
+    else v2ServiceAndCurrentConvId.currentValue.foreach {
       case (vcs, id) => vcs.leaveVoiceChannel(id)
     }
   }
@@ -246,14 +250,13 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     }
   }
 
-  def toggleMuted(): Unit = {
+  def toggleMuted(): Unit =
     if (_isV3Call)
       _v3ServiceAndCurrentConvId.foreach(_._1.setCallMuted(!muted.currentValue.getOrElse(false)))
     else
-      voiceServiceAndCurrentConvId.currentValue.foreach {
+      v2ServiceAndCurrentConvId.currentValue.foreach {
         case (vcs, id) => if (muted.currentValue.getOrElse(false)) vcs.unmuteVoiceChannel(id) else vcs.muteVoiceChannel(id)
       }
-  }
 
   def toggleVideo(): Unit = {
     val state = videoSendState.currentValue.getOrElse(DONT_SEND)
@@ -261,7 +264,7 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
       _v3ServiceAndCurrentConvId.foreach {
         case (s, cId) => s.setVideoSendActive(cId, if(state == SEND) false else true)
       }
-    else voiceServiceAndCurrentConvId.currentValue.foreach {
+    else v2ServiceAndCurrentConvId.currentValue.foreach {
       case (vcs, id) => vcs.setVideoSendState(id, if (state == SEND) DONT_SEND else SEND)
     }
   }

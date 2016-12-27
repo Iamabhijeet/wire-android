@@ -144,7 +144,7 @@ protected class AudioParticipantChatheadView(val context: Context, val attrs: At
   }.on(Threading.Ui)(nameView.setVisibility)
 
   (for {
-    (vcs, convId) <- controller.glob.voiceServiceAndCurrentConvId
+    (vcs, convId) <- controller.glob.v2ServiceAndCurrentConvId
     userId <- userId
     volume <- vcs.volumeChanged(convId, userId)
   } yield volume).on(Threading.Ui)(gainView.onGainHasChanged(_))

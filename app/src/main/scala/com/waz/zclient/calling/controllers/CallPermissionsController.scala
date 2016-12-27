@@ -59,6 +59,9 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
   private var _v3Service = Option.empty[CallingService]
   v3Service(s => _v3Service = Some(s))
 
+  private var _v3ServiceAndCurrentConvId = Option.empty[(CallingService, ConvId)]
+  v3ServiceAndCurrentConvId(v => _v3ServiceAndCurrentConvId = Some(v))
+
   private var _convId = Option.empty[ConvId]
   convId (c => _convId = Some(c))
 
@@ -67,7 +70,7 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
       if (v3Pref)
         _v3Service.foreach(_.startCall(convId, withVideo))
       else
-        voiceService.currentValue.foreach(_.joinVoiceChannel(convId, withVideo))
+        v2Service.currentValue.foreach(_.joinVoiceChannel(convId, withVideo))
 
     }(R.string.calling__cannot_start__title,
       if (withVideo) R.string.calling__cannot_start__no_video_permission__message else R.string.calling__cannot_start__no_permission__message)
@@ -76,12 +79,17 @@ class CallPermissionsController(implicit inj: Injector, cxt: WireContext) extend
   def acceptCall(): Unit = {
     //TODO handle permissions for v3
     if (_isV3Call) {
-      (_v3Service, _convId) match {
-        case (Some(s), Some(cId)) => s.acceptCall(cId)
+      (videoCall.currentValue.getOrElse(false), _v3ServiceAndCurrentConvId) match {
+        case (withVideo, Some((vcs, id))) =>
+          permissionsController.requiring(if (withVideo) Set(CameraPermission, RecordAudioPermission) else Set(RecordAudioPermission)) {
+            vcs.acceptCall(id)
+          }(R.string.calling__cannot_start__title,
+            if (withVideo) R.string.calling__cannot_start__no_video_permission__message else R.string.calling__cannot_start__no_permission__message,
+            vcs.endCall(id))
         case _ =>
       }
     } else {
-      (videoCall.currentValue.getOrElse(false), voiceServiceAndCurrentConvId.currentValue) match {
+      (videoCall.currentValue.getOrElse(false), v2ServiceAndCurrentConvId.currentValue) match {
         case (withVideo, Some((vcs, id))) =>
           permissionsController.requiring(if (withVideo) Set(CameraPermission, RecordAudioPermission) else Set(RecordAudioPermission)) {
             vcs.joinVoiceChannel(id, withVideo)

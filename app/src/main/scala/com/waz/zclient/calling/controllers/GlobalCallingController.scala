@@ -92,16 +92,21 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
   /**
     * From here on, we don't need to worry about empty signals, since the call activity and notifications should be closed if there is no active call.
     */
-  val voiceService = zms.map(_.voice)
+  val v2Service = zms.map(_.voice)
   val convId = convIdOpt.collect { case Some(c) => c }
 
-  val voiceServiceAndCurrentConvId = for {
-    vcs <- voiceService
+  val v2ServiceAndCurrentConvId = for {
+    vcs <- v2Service
     cId <- convId
   } yield (vcs, cId)
 
+  val v3ServiceAndCurrentConvId = for {
+    svc <- v3Service
+    c <- convId
+  } yield (svc, c)
+
   //Note, we can't rely on the channels from ongoingAndTopIncoming directly, as they only update the presence of a channel, not their internal state
-  val currentChannel = voiceServiceAndCurrentConvId.flatMap { case (vcs, id) => vcs.voiceChannelSignal(id) }
+  val currentChannel = v2ServiceAndCurrentConvId.flatMap { case (vcs, id) => vcs.voiceChannelSignal(id) }
 
   val callState = callStateOpt.collect { case Some(s) => s }
 
