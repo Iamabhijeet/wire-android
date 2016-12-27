@@ -71,7 +71,7 @@ class MemberChangePartView(context: Context, attrs: AttributeSet, style: Int) ex
     val me = zms.selfUserId
     val userId = msg.userId
 
-    (msg.msgType, displayName, msg.members) match {
+    (msg.msgType, displayName, msg.members.toSeq) match {
       case (MEMBER_JOIN, Me, _)                   if msg.firstMessage => context.getString(R.string.content__system__you_started_participant, "", members)
       case (MEMBER_JOIN, Other(name), Seq(`me`))  if msg.firstMessage => context.getString(R.string.content__system__other_started_you, name)
       case (MEMBER_JOIN, Other(name), _)          if msg.firstMessage => context.getString(R.string.content__system__other_started_participant, name, members)
