@@ -167,8 +167,7 @@ public class MessageNotificationChatheadView extends FrameLayout implements Upda
         } else {
             label.setTypeface(getResources().getString(R.string.message_notification_chathead__label__font));
             if (message.getMessageType() == Message.Type.KNOCK) {
-                messageLabel = message.isHotKnock() ? getResources().getString(R.string.in_app_notification__footer__pinged_again)
-                                                    : getResources().getString(R.string.in_app_notification__footer__ping);
+                messageLabel = getResources().getString(R.string.in_app_notification__footer__ping);
             } else if (message.getMessageType() == Message.Type.ASSET) {
                 messageLabel = getResources().getString(R.string.in_app_notification__footer__photo);
             } else if (message.getMessageType() == Message.Type.ANY_ASSET) {

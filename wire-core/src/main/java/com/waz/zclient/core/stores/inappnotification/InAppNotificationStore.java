@@ -47,8 +47,7 @@ public abstract class InAppNotificationStore implements IInAppNotificationStore 
         for (InAppNotificationStoreObserver observer : inAppNotificationObservers) {
             observer.onIncomingKnock(new KnockingEvent(knock.getUser(),
                                                        knock.getConversationId(),
-                                                       SystemClock.uptimeMillis() + 50,
-                                                       knock.isHotKnock()));
+                                                       SystemClock.uptimeMillis() + 50));
         }
     }
 

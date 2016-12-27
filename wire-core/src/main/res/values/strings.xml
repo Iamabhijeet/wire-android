@@ -204,9 +204,7 @@
     <string name="content__missed_call__xxx_called">[[%1$s]] CALLED</string>
 
     <string name="content__you_pinged">[[YOU]] PINGED</string>
-    <string name="content__you_pinged_again">[[YOU]] PINGED AGAIN</string>
     <string name="content__xxx_pinged">[[%1$s]] PINGED</string>
-    <string name="content__xxx_pinged_again">[[%1$s]] PINGED AGAIN</string>
 
     <!-- Conversation: E2EE system messages -->
     <string name="content__otr__conversation_verified">Conversation verified</string>

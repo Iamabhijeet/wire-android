@@ -109,13 +109,7 @@ public class PingMessageViewController extends MessageViewController implements 
 
     private String getPingMessage() {
         final String pingMessage;
-        if (message.isHotKnock()) {
-            if (user.isMe()) {
-                pingMessage = context.getString(R.string.content__you_pinged_again);
-            } else {
-                pingMessage = context.getString(R.string.content__xxx_pinged_again, user.getDisplayName().toUpperCase(locale));
-            }
-        } else if (user.isMe()) {
+        if (user.isMe()) {
             pingMessage = context.getString(R.string.content__you_pinged);
         } else {
             pingMessage = context.getString(R.string.content__xxx_pinged, user.getDisplayName().toUpperCase(locale));

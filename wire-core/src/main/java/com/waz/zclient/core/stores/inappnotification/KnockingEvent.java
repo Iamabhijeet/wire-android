@@ -24,14 +24,12 @@ public class KnockingEvent implements IKnockingEvent {
     private User user;
     private final String conversationId;
     private final long startTime;
-    private final boolean hotKnock;
     private boolean listHasConsumed;
 
-    public KnockingEvent(User user, String conversationId, long startTime, boolean hotKnock) {
+    public KnockingEvent(User user, String conversationId, long startTime) {
         this.user = user;
         this.conversationId = conversationId;
         this.startTime = startTime;
-        this.hotKnock = hotKnock;
     }
 
     public String getConversationId() {
@@ -44,10 +42,6 @@ public class KnockingEvent implements IKnockingEvent {
 
     public int getDuration() {
         return DEFAULT_DURATION;
-    }
-
-    public boolean isHotKnock() {
-        return hotKnock;
     }
 
     public String getUserName() {
