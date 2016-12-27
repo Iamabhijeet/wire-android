@@ -49,7 +49,7 @@ class SoundController(implicit inj: Injector, cxt: Context) extends Injectable {
 
   setCustomSoundUrisFromPreferences(cxt.getSharedPreferences(UserPreferencesController.USER_PREFS_TAG, Context.MODE_PRIVATE))
 
-  def setIncomingRingTonePlaying(play: Boolean) = if (play) {
+  def setIncomingRingTonePlaying(play: Boolean) = {
     setMediaPlaying(R.raw.ringing_from_them, play)
     setVibrating(R.array.ringing_from_them, play, loop = true)
   }

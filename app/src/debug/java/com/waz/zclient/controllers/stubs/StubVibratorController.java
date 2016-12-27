@@ -21,28 +21,9 @@ import com.waz.zclient.controllers.vibrator.IVibratorController;
 import java.lang.Override;
 
 public class StubVibratorController implements IVibratorController {
-  @Override
-  public void vibrate(int pattern) {
-    ;
-  }
 
   @Override
   public void tearDown() {
-    ;
-  }
-
-  @Override
-  public void vibrate(int pattern, boolean loop) {
-    ;
-  }
-
-  @Override
-  public void vibrate(long[] pattern, boolean loop) {
-    ;
-  }
-
-  @Override
-  public void stopVibrate() {
     ;
   }
 

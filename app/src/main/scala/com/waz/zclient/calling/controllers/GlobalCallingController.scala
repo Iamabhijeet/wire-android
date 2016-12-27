@@ -21,36 +21,21 @@ import _root_.com.waz.api.VoiceChannelState._
 import _root_.com.waz.service.ZMessaging
 import _root_.com.waz.utils.events.{EventContext, Signal}
 import android.os.PowerManager
-import com.waz.ZLog.ImplicitTag._
-import com.waz.ZLog.verbose
 import com.waz.api.{IConversation, KindOfCall, VoiceChannelState}
-import com.waz.model.UserId
+import com.waz.model.{UserId, VoiceChannelData}
+import com.waz.service.call.CallInfo
 import com.waz.service.call.CallInfo._
 import com.waz.threading.Threading
 import com.waz.zclient.calling.CallingActivity
+import com.waz.zclient.media.SoundController
 import com.waz.zclient.{Injectable, Injector, WireContext}
 
 class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends Injectable {
 
   private implicit val eventContext = cxt.eventContext
 
-  val zmsOpt = inject[Signal[Option[ZMessaging]]]
-
-  val zms = zmsOpt.collect { case Some(z) => z }
-  val userStorage = zms map (_.usersStorage)
-
   private val screenManager = new ScreenManager
-
-  val prefs = zms.map(_.prefs)
-
-  val v3Service = zms.map(_.calling)
-  val v3Call = v3Service.flatMap(_.currentCall)
-  val isV3Call = v3Call.map {
-    case IsActive() =>
-      verbose("v3 call active")
-      true
-    case _ => false
-  }
+  private val soundController = inject[SoundController]
 
   /**
     * Opt Signals - these signals should be used where empty states (i.e, Nones) are important to the devices state. For example
@@ -58,84 +43,91 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
     * call. If there is no active call, for whatever reason, there should be no calling activity, and so on. The other signals
     * derived from these ones using `collect` will not propagate empty values, but that's okay since the calling UI should be
     * torn down before they can be of use to us anyway.
+    *
+    * Note, any signals which are PART of another signal (zipped or flatmapped) which needs to be aware of Nones should also
+    * be careful to handle Nones themselves. This is because if a signal is collected, and the value is None, the individual
+    * signal becomes empty, and so prevents the group of signals - of which it is a part of - from firing.
     */
 
+  val zmsOpt = inject[Signal[Option[ZMessaging]]]
+
+  val v3CallOpt: Signal[Option[CallInfo]] = zmsOpt.flatMap {
+    case Some(z) => z.calling.currentCall.map(Some(_))
+    case _ => Signal.const(None)
+  }
+
+  val isV3Call = v3CallOpt.map {
+    case Some(IsActive()) => true
+    case _ => false
+  }
+
   val convIdOpt = isV3Call.flatMap {
-    case true => v3Call.map(_.convId)
-    case false => zms.flatMap(_.voiceContent.ongoingAndTopIncomingChannel).map {
+    case true => v3CallOpt.map(_.flatMap(_.convId))
+    case false => zmsOpt.flatMap {
+      case Some(z) => z.voiceContent.ongoingAndTopIncomingChannel
+      case _ => Signal.const((Option.empty[VoiceChannelData], Option.empty[VoiceChannelData]))
+    }.map {
       case (ongoing, incoming) => ongoing.orElse(incoming).map(_.id)
     }
   }
 
-  val callStateOpt: Signal[Option[VoiceChannelState]] = zmsOpt.flatMap {
-    case Some(zms) => convIdOpt.flatMap {
-      case Some(cId) => isV3Call.flatMap {
-        case true => v3Call.map(i => Some(i.state))
-        case _ => zms.voice.voiceChannelSignal(cId).map(d => Some(d.state))
-      }
-      case None => Signal.const(None)
-    }
+  //Note, we can't rely on the channels from ongoingAndTopIncoming directly, as they only update the presence of a channel, not their internal state
+  val currentChannelOpt: Signal[Option[VoiceChannelData]] = (for {
+    zms <- zmsOpt
+    convId <- convIdOpt
+  } yield (zms, convId)).flatMap {
+    case (Some(z), Some(cId)) => z.voice.voiceChannelSignal(cId).map(Some(_))
     case _ => Signal.const(None)
   }
 
+  val callStateOpt: Signal[Option[VoiceChannelState]] = isV3Call.flatMap {
+    case true => v3CallOpt.map(_.map(_.state))
+    case _ => currentChannelOpt.map(_.map(_.state))
+  }
+
   val activeCall = zmsOpt.flatMap {
-    case Some(zms) => isV3Call.flatMap {
-      case true => Signal.const(true)
-      case _ => callStateOpt.map {
-        case Some(SELF_CALLING | SELF_JOINING | SELF_CONNECTED | OTHER_CALLING | OTHERS_CONNECTED) => true
-        case _ => false
-      }
+    case Some(z) => callStateOpt.map {
+      case Some(SELF_CALLING | SELF_JOINING | SELF_CONNECTED | OTHER_CALLING | OTHERS_CONNECTED) => true
+      case _ => false
     }
     case _ => Signal.const(false)
   }
 
-  /**
-    * From here on, we don't need to worry about empty signals, since the call activity and notifications should be closed if there is no active call.
-    */
-  val v2Service = zms.map(_.voice)
-  val convId = convIdOpt.collect { case Some(c) => c }
-
-  val v2ServiceAndCurrentConvId = for {
-    vcs <- v2Service
-    cId <- convId
-  } yield (vcs, cId)
-
-  val v3ServiceAndCurrentConvId = for {
-    svc <- v3Service
-    c <- convId
-  } yield (svc, c)
-
-  //Note, we can't rely on the channels from ongoingAndTopIncoming directly, as they only update the presence of a channel, not their internal state
-  val currentChannel = v2ServiceAndCurrentConvId.flatMap { case (vcs, id) => vcs.voiceChannelSignal(id) }
-
-  val callState = callStateOpt.collect { case Some(s) => s }
-
-  val conversation = zms.zip(convId) flatMap { case (zms, convId) => zms.convsStorage.signal(convId) }
-  val conversationName = conversation map (data => if (data.convType == IConversation.Type.GROUP) data.name.filter(!_.isEmpty).getOrElse(data.generatedName) else data.generatedName)
-
-  val selfUser = zms flatMap (_.users.selfUser)
-
-  val callerId = isV3Call.flatMap {
-    case true => v3Call flatMap { case info =>
-      (info.others, info.state) match {
-        case (_, SELF_CALLING) => selfUser.map(_.id)
-        case (others, OTHER_CALLING) if others.size == 1 => Signal.const(others.head)
-        case _ => Signal.empty[UserId] //TODO Dean do I need this information for other call states?
-      }
-    }
-    case _ => currentChannel map (_.caller) flatMap (_.fold(Signal.empty[UserId])(Signal(_)))
+  val outgoingCall = callStateOpt.map {
+    case Some(st) if st == SELF_CALLING => true
+    case _ => false
   }
-  val callerData = userStorage.zip(callerId).flatMap { case (storage, id) => storage.signal(id) }
 
-  val groupCall = isV3Call.flatMap {
-    case true => Signal.const(false)
-    case _ => currentChannel map (_.tracking.kindOfCall == KindOfCall.GROUP)
+  val incomingCall = callStateOpt.map {
+    case Some(st) if st == OTHER_CALLING => true
+    case _ => false
+  }
+
+  val muted = isV3Call.flatMap {
+    case true => v3CallOpt.map {
+      case Some(c) => c.muted
+      case _ => false
+    }
+    case _ => currentChannelOpt map {
+      case Some(c) => c.muted
+      case _ => false
+    }
   }
 
   val videoCall = isV3Call.flatMap {
-    case true => v3Call.map(_.isVideoCall)
-    case _ => currentChannel.map(_.video.isVideoCall)
+    case true => v3CallOpt.map {
+      case Some(c) => c.isVideoCall
+      case _ => false
+    }
+    case _ => currentChannelOpt.map {
+      case Some(c) => c.video.isVideoCall
+      case _ => false
+    }
   }
+
+  /**
+    * And here is where their proper is important.
+    */
 
   private var _wasUiActiveOnCallStart = false
 
@@ -157,12 +149,82 @@ class GlobalCallingController(cxt: WireContext)(implicit inj: Injector) extends 
 
   (for {
     v <- videoCall
-    st <- callState
+    st <- callStateOpt
   } yield (v, st)) {
     case (true, _) => screenManager.setStayAwake()
-    case (false, OTHER_CALLING) => screenManager.setStayAwake()
-    case (false, SELF_CALLING | SELF_JOINING | SELF_CONNECTED) => screenManager.setProximitySensorEnabled()
+    case (false, Some(OTHER_CALLING)) => screenManager.setStayAwake()
+    case (false, Some(SELF_CALLING | SELF_JOINING | SELF_CONNECTED)) => screenManager.setProximitySensorEnabled()
     case _ => screenManager.releaseWakeLock()
+  }
+
+  (for {
+    m <- muted
+    i <- incomingCall
+  } yield (m, i)) { case (m, i) =>
+    soundController.setIncomingRingTonePlaying(!m && i)
+  }
+
+  (for {
+    v <- videoCall
+    o <- outgoingCall
+  } yield (v, o)) { case (v, o) =>
+    soundController.setOutgoingRingTonePlaying(o, v)
+  }
+
+
+  /**
+    * From here on, put signals where we're not too worried if we handle empty states or not
+    * (mostly stuff that wouldn't affect proper closing of a call).
+    *
+    * Most of the stuff here is just because it saves re-defining the signals in one of the sub-CallControllers
+    */
+
+  val zms = zmsOpt.collect { case Some(z) => z }
+
+  val userStorage = zms map (_.usersStorage)
+  val prefs = zms.map(_.prefs)
+
+  val v2Service = zms.map(_.voice)
+
+  val v3Service = zms.map(_.calling)
+  val v3Call = v3Service.flatMap(_.currentCall)
+
+  val convId = convIdOpt.collect { case Some(c) => c }
+
+  val v2ServiceAndCurrentConvId = for {
+    vcs <- v2Service
+    cId <- convId
+  } yield (vcs, cId)
+
+  val v3ServiceAndCurrentConvId = for {
+    svc <- v3Service
+    c <- convId
+  } yield (svc, c)
+
+  val currentChannel = currentChannelOpt.collect { case Some(c) => c }
+
+  val callState = callStateOpt.collect { case Some(s) => s }
+
+  val conversation = zms.zip(convId) flatMap { case (z, cId) => z.convsStorage.signal(cId) }
+  val conversationName = conversation map (data => if (data.convType == IConversation.Type.GROUP) data.name.filter(!_.isEmpty).getOrElse(data.generatedName) else data.generatedName)
+
+  val selfUser = zms flatMap (_.users.selfUser)
+
+  val callerId = isV3Call.flatMap {
+    case true => v3Call flatMap { case info =>
+      (info.others, info.state) match {
+        case (_, SELF_CALLING) => selfUser.map(_.id)
+        case (others, OTHER_CALLING) if others.size == 1 => Signal.const(others.head)
+        case _ => Signal.empty[UserId] //TODO Dean do I need this information for other call states?
+      }
+    }
+    case _ => currentChannel map (_.caller) flatMap (_.fold(Signal.empty[UserId])(Signal(_)))
+  }
+  val callerData = userStorage.zip(callerId).flatMap { case (storage, id) => storage.signal(id) }
+
+  val groupCall = isV3Call.flatMap {
+    case true => Signal.const(false)
+    case _ => currentChannel map (_.tracking.kindOfCall == KindOfCall.GROUP)
   }
 }
 

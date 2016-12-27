@@ -42,10 +42,9 @@ object WireApplication {
     bind[Signal[Option[ZMessaging]]] to ZMessaging.currentUi.currentZms
     bind[Signal[ZMessaging]] to ZMessaging.currentUi.currentZms.collect { case Some(zms) => zms }
     bind[PreferenceService] to new PreferenceService(inject[Context])
+    bind[SoundController] to new SoundController
     bind[GlobalCallingController] to new GlobalCallingController(inject[Context])
     bind[GlobalCameraController] to new GlobalCameraController(inject[Context], new AndroidCameraFactory)(EventContext.Global)
-    bind[MediaManagerService] to ZMessaging.currentGlobal.mediaManager
-    bind[SoundController] to new SoundController
 
     //notifications
     bind[MessageNotificationsController] to new MessageNotificationsController()

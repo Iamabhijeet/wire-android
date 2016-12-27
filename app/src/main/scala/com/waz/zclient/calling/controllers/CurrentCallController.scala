@@ -57,11 +57,6 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
     case _ => true
   }
 
-  val muted = isV3Call.flatMap {
-    case true => v3Call.map(_.muted)
-    case _ => currentChannel map (_.muted)
-  }
-
   val videoSendState = isV3Call.flatMap {
     case true => v3Call.map(_.videoSendState)
     case _ => currentChannel map (_.video.videoSendState)
@@ -109,11 +104,6 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
 
   val onCallEstablished = callEstablished.onChanged
 
-  val outgoingCall = isV3Call.flatMap {
-    case true => v3Call map (_.state == SELF_CALLING)
-    case _ => currentChannel map (_.state == SELF_CALLING)
-  }
-
   val duration = {
     def timeSince(est: Option[Instant]) = new ClockSignal(Duration.ofSeconds(1).asScala).map(_ => est.fold2(ZERO, between(_, now)))
     isV3Call.flatMap {
@@ -130,17 +120,16 @@ class CurrentCallController(implicit inj: Injector, cxt: WireContext) extends In
   }
 
   val subtitleText = (for {
-    outgoing <- outgoingCall
     video <- videoCall
     state <- callState
     dur <- duration
-  } yield (outgoing, video, state, dur)) map {
-    case (true,  true,  SELF_CALLING,                     _)        => cxt.getString(R.string.calling__header__outgoing_video_subtitle)
-    case (true,  false, SELF_CALLING,                     _)        => cxt.getString(R.string.calling__header__outgoing_subtitle)
-    case (false, true,  OTHER_CALLING,                    _)        => cxt.getString(R.string.calling__header__incoming_subtitle__video)
-    case (false, false, OTHER_CALLING | OTHERS_CONNECTED, _)        => cxt.getString(R.string.calling__header__incoming_subtitle)
-    case (_,     _,     SELF_JOINING,                     _)        => cxt.getString(R.string.calling__header__joining)
-    case (false, false, SELF_CONNECTED,                   duration) => duration
+  } yield (video, state, dur)) map {
+    case (true,  SELF_CALLING,                     _)        => cxt.getString(R.string.calling__header__outgoing_video_subtitle)
+    case (false, SELF_CALLING,                     _)        => cxt.getString(R.string.calling__header__outgoing_subtitle)
+    case (true,  OTHER_CALLING,                    _)        => cxt.getString(R.string.calling__header__incoming_subtitle__video)
+    case (false, OTHER_CALLING | OTHERS_CONNECTED, _)        => cxt.getString(R.string.calling__header__incoming_subtitle)
+    case (_,     SELF_JOINING,                     _)        => cxt.getString(R.string.calling__header__joining)
+    case (false, SELF_CONNECTED,                   duration) => duration
     case _ => ""
   }
 

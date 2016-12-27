@@ -19,12 +19,10 @@ package com.waz.zclient.camera.views
 
 import android.content.Context
 import android.graphics.{Matrix, Rect, SurfaceTexture}
-import android.os.Vibrator
 import android.util.AttributeSet
 import android.view._
 import com.waz.ZLog
 import com.waz.api.ImageAssetFactory
-import com.waz.service.MediaManagerService
 import com.waz.threading.CancellableFuture.CancelException
 import com.waz.threading.Threading
 import com.waz.utils.returning

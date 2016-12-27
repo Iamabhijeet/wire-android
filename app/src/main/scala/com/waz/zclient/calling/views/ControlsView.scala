@@ -90,21 +90,24 @@ private class OutgoingControlsView(val context: Context, val attrs: AttributeSet
 
   val controller = inject[CurrentCallController]
 
+  import controller._
+  import controller.glob._
+
   //TODO abstract away these calls to callOnClick()
   leftButton.onClick {
-    controller.toggleMuted()
+    toggleMuted()
     callOnClick()
   }
   middleButton.onClick {
-    controller.leaveCall()
+    leaveCall()
     callOnClick()
   }
   rightButton.onClick {
-    if (controller.glob.videoCall.currentValue.getOrElse(false)) controller.toggleVideo() else controller.speakerButton.press()
+    if (videoCall.currentValue.getOrElse(false)) toggleVideo() else speakerButton.press()
     callOnClick()
   }
 
-  controller.glob.videoCall.map {
+  videoCall.map {
     case true => (R.string.glyph__video, R.string.incoming__controls__ongoing__video)
     case false => (R.string.glyph__speaker_loud, R.string.incoming__controls__ongoing__speaker)
   }.on(Threading.Ui) {
@@ -113,14 +116,14 @@ private class OutgoingControlsView(val context: Context, val attrs: AttributeSet
       rightButton.setText(text)
   }
 
-  controller.rightButtonShown.on(Threading.Ui) { v =>
+  rightButtonShown.on(Threading.Ui) { v =>
     rightSpacer.setVisible(v)
     rightButton.setVisible(v)
   }
 
-  controller.muted.on(Threading.Ui)(leftButton.setButtonPressed)
+  muted.on(Threading.Ui)(leftButton.setButtonPressed)
 
-  Signal(controller.glob.videoCall, controller.speakerButton, controller.videoSendState).map {
+  Signal(videoCall, speakerButton, videoSendState).map {
     case (true, _, videoSendState) => videoSendState == SEND
     case (false, speakerEnabled, _) => speakerEnabled
   }.on(Threading.Ui)(rightButton.setButtonPressed)
