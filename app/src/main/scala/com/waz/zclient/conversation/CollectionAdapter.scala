@@ -23,13 +23,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.support.v4.content.ContextCompat
-import android.support.v7.widget.RecyclerView
+import android.support.v7.widget.{CardView, RecyclerView}
 import android.support.v7.widget.RecyclerView.{AdapterDataObserver, ViewHolder}
 import android.text.format.Formatter
 import android.util.{AttributeSet, Patterns}
 import android.view.View.OnClickListener
 import android.view.{LayoutInflater, View, ViewGroup}
-import android.widget.{FrameLayout, LinearLayout, TextView}
+import android.widget.{FrameLayout, LinearLayout, RelativeLayout, TextView}
 import com.waz.ZLog._
 import com.waz.api.{ImageAsset, ImageAssetFactory, Message}
 import com.waz.model.{AssetData, AssetId, MessageData}
@@ -40,6 +40,7 @@ import com.waz.zclient.conversation.CollectionAdapter._
 import com.waz.zclient.core.api.scala.ModelObserver
 import com.waz.zclient.pages.main.conversation.views.AspectRatioImageView
 import com.waz.zclient.ui.drawable.FileDrawable
+import com.waz.zclient.ui.text.GlyphTextView
 import com.waz.zclient.ui.utils.ResourceUtils
 import com.waz.zclient.utils.ViewUtils
 import com.waz.zclient.views.images.ImageAssetView
@@ -151,7 +152,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
 
   override def onBindViewHolder(holder: ViewHolder, position: Int): Unit = {
     holder match {
-      case f: FileViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _files, position).foreach(a => f.setAsset(a._2))
+      case f: FileViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _files, position).foreach(a => f.setAsset(a._1, a._2))
       case c: CollViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _images, position).foreach(s => c.setAssetMessage(s._1, s._2, ctrler.bitmapSquareSignal, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
       case l: LinkPreviewViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _links, position).foreach(a => l.setMessageData(a._1))
       case l: SimpleLinkViewHolder => assetSignal(if (contentMode == CollectionAdapter.VIEW_MODE_ALL) _all else _links, position).foreach(a => l.setMessageData(a._1))
@@ -196,7 +197,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
   val imageListener = new OnClickListener {
     override def onClick(v: View): Unit = {
       v.getTag match {
-        case md: MessageData if contentMode == CollectionAdapter.VIEW_MODE_IMAGES => ctrler.focusedItem ! Some(md)
+        case md: MessageData => ctrler.focusedItem ! Some(md)
         case _ =>
       }
     }
@@ -211,7 +212,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
   val linkListener = new OnClickListener {
     override def onClick(v: View): Unit = {
       v.getTag match {
-        case md: MessageData if contentMode == CollectionAdapter.VIEW_MODE_LINKS => ctrler.focusedItem ! Some(md)
+        case md: MessageData => ctrler.focusedItem ! Some(md)
         case _ =>
       }
     }
@@ -219,12 +220,19 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
 
   override def onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
     viewType match {
-      case CollectionAdapter.VIEW_TYPE_FILE => FileViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_file, parent, false).asInstanceOf[LinearLayout], fileListener)
+      case CollectionAdapter.VIEW_TYPE_FILE => FileViewHolder(inflateCollectionCardView(R.layout.row_collection_file, parent), fileListener)
       case CollectionAdapter.VIEW_TYPE_IMAGE => CollViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_image, parent, false).asInstanceOf[AspectRatioImageView], imageListener)
-      case CollectionAdapter.VIEW_TYPE_LINK_PREVIEW => LinkPreviewViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_link, parent, false).asInstanceOf[LinearLayout], linkListener)
-      case CollectionAdapter.VIEW_TYPE_SIMPLE_LINK => SimpleLinkViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_simple_link, parent, false).asInstanceOf[LinearLayout], linkListener)
+      case CollectionAdapter.VIEW_TYPE_LINK_PREVIEW => LinkPreviewViewHolder(inflateCollectionCardView(R.layout.row_collection_link, parent), linkListener)
+      case CollectionAdapter.VIEW_TYPE_SIMPLE_LINK => SimpleLinkViewHolder(inflateCollectionCardView(R.layout.row_collection_simple_link, parent), linkListener)
       case _ => returning(null.asInstanceOf[ViewHolder])(_ => error(s"Unexpected ViewType: $viewType"))
     }
+
+  private def inflateCollectionCardView(contentId: Int, parent: ViewGroup): LinearLayout = {
+    val view = LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_card_template, parent, false).asInstanceOf[LinearLayout]
+    val cardContainer:CardView = ViewUtils.getView(view, R.id.cv__collections__content_card)
+    LayoutInflater.from(view.getContext).inflate(contentId, cardContainer, true)
+    view
+  }
 
   def isFullSpan(position: Int): Boolean = {
     getItemViewType(position) match {
@@ -278,13 +286,19 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
     }
 
     header.nameView.setText(getHeaderText(getHeaderId(position)))
+    header.countView.setText(getHeaderCountText(getHeaderId(position)))
+    if (contentMode == CollectionAdapter.VIEW_MODE_ALL) {
+      header.arrowView.setVisibility(View.VISIBLE);
+    } else {
+      header.arrowView.setVisibility(View.GONE);
+    }
 
-    val widthSpec: Int = View.MeasureSpec.makeMeasureSpec(parent.getWidth, View.MeasureSpec.UNSPECIFIED)
+    val widthSpec: Int = View.MeasureSpec.makeMeasureSpec(parent.getWidth, View.MeasureSpec.EXACTLY)
     val heightSpec: Int = View.MeasureSpec.makeMeasureSpec(parent.getHeight, View.MeasureSpec.EXACTLY)
     val childWidth: Int = ViewGroup.getChildMeasureSpec(widthSpec, parent.getPaddingLeft + parent.getPaddingRight, header.getLayoutParams.width)
     val childHeight: Int = ViewGroup.getChildMeasureSpec(heightSpec, parent.getPaddingTop + parent.getPaddingBottom, header.getLayoutParams.height)
     header.measure(childWidth, childHeight)
-    header.layout(0, 0, parent.getMeasuredWidth, header.getMeasuredHeight)
+    header.layout(0, 0, header.getMeasuredWidth, header.getMeasuredHeight)
     header
   }
 
@@ -299,6 +313,16 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
       case _ => "Whatever"
     }
   }
+
+  private def getHeaderCountText(headerId: Int): String = {
+    headerId match {
+      case Header.`mainImages` => "All " + images.currentValue.getOrElse(Seq()).length
+      case Header.`mainFiles` => "All " + files.currentValue.getOrElse(Seq()).length
+      case Header.`mainLinks` => "All " + links.currentValue.getOrElse(Seq()).length
+      case _ => ""
+    }
+  }
+
 
   def getItemPosition(messageData: MessageData): Int = {
     contentMode match {
@@ -354,24 +378,11 @@ object CollectionAdapter {
     def this(context: Context) =  this(context, null)
 
     lazy val nameView: TextView = ViewUtils.getView(this, R.id.ttv__collection_header__name)
+    lazy val countView: TextView = ViewUtils.getView(this, R.id.ttv__collection_header__count)
+    lazy val arrowView: GlyphTextView = ViewUtils.getView(this, R.id.gtv__arrow)
 
     LayoutInflater.from(context).inflate(R.layout.row_collection_header, this, true)
-    setOrientation(LinearLayout.HORIZONTAL)
-    setBackgroundColor(ContextCompat.getColor(context, R.color.header_background))
-  }
-
-  case class FileViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
-    val actionButton: View = ViewUtils.getView(view, R.id.v__row_collection__file_icon)
-    val nameTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_collection__file__filename)
-    val detailTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_collection__file__fileinfo)
-    view.setOnClickListener(listener)
-
-    def setAsset(asset: Signal[AssetData]) = asset.on(Threading.Ui) { a =>
-      actionButton.setBackground(new FileDrawable(view.getContext, a.fileExtension))
-      a.name.foreach(nameTextView.setText)
-      detailTextView.setText(view.getContext.getString(R.string.content__file__status__default__size_and_extension,
-        Formatter.formatFileSize(view.getContext, a.sizeInBytes), a.fileExtension.toUpperCase(Locale.getDefault)))
-    }
+    setBackgroundColor(ContextCompat.getColor(context, R.color.collections_header_background))
   }
 
   case class CollViewHolder(view: AspectRatioImageView, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
@@ -396,12 +407,30 @@ object CollectionAdapter {
     }
   }
 
-  case class LinkPreviewViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
+  abstract class CardViewTemplateHolder(baseView: LinearLayout, clickListener: OnClickListener) (implicit eventContext: EventContext) extends RecyclerView.ViewHolder(baseView){
+    val messageTime: TextView = ViewUtils.getView(baseView, R.id.ttv__collection_item__time)
+    val messageUser: TextView = ViewUtils.getView(baseView, R.id.ttv__collection_item__user_name)
+    baseView.setOnClickListener(clickListener)
+  }
+
+  case class FileViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends CardViewTemplateHolder(view, listener) {
+    val actionButton: View = ViewUtils.getView(view, R.id.v__row_collection__file_icon)
+    val nameTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_collection__file__filename)
+    val detailTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_collection__file__fileinfo)
+
+    def setAsset(messageData: MessageData, asset: Signal[AssetData]) = asset.on(Threading.Ui) { a =>
+      messageTime.setText(LocalDateTime.ofInstant(messageData.time, ZoneId.systemDefault()).toLocalDate.toString)
+      actionButton.setBackground(new FileDrawable(view.getContext, a.fileExtension))
+      a.name.foreach(nameTextView.setText)
+      detailTextView.setText(view.getContext.getString(R.string.content__file__status__default__size_and_extension,
+        Formatter.formatFileSize(view.getContext, a.sizeInBytes), a.fileExtension.toUpperCase(Locale.getDefault)))
+    }
+  }
+
+  case class LinkPreviewViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends CardViewTemplateHolder(view, listener) {
     val titleTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_conversation__link_preview__title)
     val urlTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_conversation__link_preview__url)
     val previewImageAssetView: ImageAssetView = ViewUtils.getView(view, R.id.iv__row_conversation__link_preview__image)
-    val previewImageContainer: FrameLayout = ViewUtils.getView(view, R.id.fl__row_conversation__link_preview__image_container)
-    view.setOnClickListener(listener)
 
     private val imageAssetModelObserver: ModelObserver[ImageAsset] = new ModelObserver[ImageAsset]() {
       override def updated(imageAsset: ImageAsset): Unit = {
@@ -411,6 +440,7 @@ object CollectionAdapter {
 
     def setMessageData(messageData: MessageData): Unit = {
       view.setTag(messageData)
+      messageTime.setText(LocalDateTime.ofInstant(messageData.time, ZoneId.systemDefault()).toLocalDate.toString)
       titleTextView.setText(messageData.content.find(_.openGraph.nonEmpty).map(_.openGraph.get.title).getOrElse(""))
       urlTextView.setText(messageData.content.find(_.tpe == Message.Part.Type.WEB_LINK).map(_.content).getOrElse(""))
       val imageAsset = ImageAssetFactory.getImageAsset(messageData.content.find(_.openGraph.nonEmpty).flatMap(_.openGraph.flatMap(_.image)).getOrElse(Uri.EMPTY))
@@ -418,12 +448,12 @@ object CollectionAdapter {
     }
   }
 
-  case class SimpleLinkViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
+  case class SimpleLinkViewHolder(view: LinearLayout, listener: OnClickListener)(implicit eventContext: EventContext) extends CardViewTemplateHolder(view, listener) {
     val urlTextView: TextView = ViewUtils.getView(view, R.id.ttv__row_collection__link__url)
-    view.setOnClickListener(listener)
 
     def setMessageData(messageData: MessageData): Unit = {
       view.setTag(messageData)
+      messageTime.setText(LocalDateTime.ofInstant(messageData.time, ZoneId.systemDefault()).toLocalDate.toString)
       urlTextView.setText(messageData.content.find(content => content.tpe == Message.Part.Type.TEXT && Patterns.WEB_URL.matcher(content.content).matches()).map(_.content).getOrElse(""))
     }
   }
