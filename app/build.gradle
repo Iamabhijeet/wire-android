@@ -303,7 +303,6 @@ dexinfo {
 }
 
 dependencies {
-    compile(name:'avs', ext:'aar')
     compile project(':wire-core')
     compile project(':wire-ui')
     compile project(':lintlib')

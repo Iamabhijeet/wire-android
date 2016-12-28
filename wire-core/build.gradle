@@ -48,25 +48,25 @@ dependencies {
         }
     }
 
-//    def avs_artifact = "$avsGroup:$avsName";
-//    def avs_version = avsInternalVersion;
+    def avs_artifact = "$avsGroup:$avsName";
+    def avs_version = avsInternalVersion;
     def se_version = zMessagingReleaseVersion;
 
     if (dev) {
-//        avs_version = avsInternalVersion;
+        avs_version = avsInternalVersion;
         se_version = zMessagingDevVersion;
     }
 
     if (internal) {
-//        avs_version = avsInternalVersion;
+        avs_version = avsInternalVersion;
         se_version = zMessagingDevVersion;
     }
 
     if (prod) {
-//        avs_version = avsVersion;
+        avs_version = avsVersion;
     }
 
-//    compile "$avs_artifact:$avs_version"
+    compile "$avs_artifact:$avs_version"
     compile("com.wire:zmessaging-android:$se_version") {
         transitive = true
     }
