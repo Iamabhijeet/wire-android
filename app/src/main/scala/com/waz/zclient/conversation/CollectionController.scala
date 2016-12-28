@@ -49,6 +49,8 @@ trait ICollectionsController {
 
   def assetSignal(id: AssetId): Signal[AssetData]
 
+  def userSignal(id: UserId): Signal[UserData]
+
   def bitmapSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]]
 
   def bitmapSquareSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]]
@@ -94,6 +96,8 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
   }
 
   override def assetSignal(id: AssetId) = assetStorage.flatMap(_.signal(id))
+
+  override def userSignal(id: UserId) = zms.map(_.usersStorage).flatMap(_.signal(id))
 
   val conversation = zms.zip(currentConv) flatMap { case (zms, convId) => zms.convsStorage.signal(convId) }
 
@@ -155,7 +159,9 @@ class StubCollectionController extends ICollectionsController{
 
   override def openCollection: Unit = {}
 
-  override def assetSignal(id: AssetId): Signal[AssetData] = Signal(AssetData())
+  override def assetSignal(id: AssetId): Signal[AssetData] = Signal.empty
+
+  override def userSignal(id: UserId): Signal[UserData] = Signal.empty
 
   override def bitmapSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]] = Signal(None)
 

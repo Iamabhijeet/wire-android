@@ -133,13 +133,33 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
     val collectionItemDecorator = new CollectionItemDecorator(adapter, columns)
     recyclerView.setAdapter(adapter)
     recyclerView.setOnTouchListener(new OnTouchListener {
+      var headerDown = false
+
       override def onTouch(v: View, event: MotionEvent): Boolean = {
+        val x = Math.round(event.getX)
+        val y = Math.round(event.getY)
         event.getAction match {
-          case MotionEvent.ACTION_UP => {
-            val x = Math.round(event.getX)
-            val y = Math.round(event.getY)
+          case MotionEvent.ACTION_DOWN =>
+            if (collectionItemDecorator.getHeaderClicked(x, y) < 0) {
+              headerDown = false
+            } else {
+              headerDown = true
+            }
+            false
+          case MotionEvent.ACTION_MOVE =>
+            if (event.getHistorySize > 0) {
+              val deltaX = event.getHistoricalX(0) - x
+              val deltaY = event.getHistoricalY(0) - y
+              if (Math.abs(deltaY) + Math.abs(deltaX) > CollectionFragment.MAX_DELTA_TOUCH) {
+                headerDown = false
+              }
+            }
+            false
+          case MotionEvent.ACTION_UP =>
+            if (!headerDown) {
+              return false
+            }
             adapter.onHeaderClicked(collectionItemDecorator.getHeaderClicked(x, y))
-          }
           case _ => false;
         }
       }
@@ -189,6 +209,8 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
 object CollectionFragment {
 
   val TAG = CollectionFragment.getClass.getSimpleName
+
+  val MAX_DELTA_TOUCH = 50
 
   def newInstance() = new CollectionFragment
 

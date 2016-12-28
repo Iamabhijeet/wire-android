@@ -22,6 +22,8 @@ import android.graphics.Rect;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import com.waz.zclient.conversation.CollectionAdapter;
+import com.waz.zclient.conversation.Header;
+import com.waz.zclient.conversation.HeaderId;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -104,14 +106,14 @@ public class CollectionItemDecorator extends RecyclerView.ItemDecoration {
             return true;
         }
         spanCount = adapter.isFullSpan(itemPosition) ? 1 : spanCount;
-        int headerId = adapter.getHeaderId(itemPosition);
+        HeaderId headerId = adapter.getHeaderId(itemPosition);
         for (int i = 1; i < spanCount + 1; i++) {
-            long previousHeaderId = -1;
+            HeaderId previousHeaderId = Header.invalid();
             int previousItemPosition = itemPosition - i;
             if (previousItemPosition >= 0 && previousItemPosition < adapter.getItemCount()) {
                 previousHeaderId = adapter.getHeaderId(previousItemPosition);
             }
-            if (headerId != previousHeaderId) {
+            if (!headerId.equals(previousHeaderId)) {
                 return true;
             }
         }
@@ -119,7 +121,7 @@ public class CollectionItemDecorator extends RecyclerView.ItemDecoration {
     }
 
     private boolean isFirstUnderHeader(int position) {
-        return position == 0 || adapter.getHeaderId(position) != adapter.getHeaderId(position - 1);
+        return position == 0 || !adapter.getHeaderId(position).equals(adapter.getHeaderId(position - 1));
     }
 
     private void drawHeader(Canvas canvas, View header, Rect offset) {
