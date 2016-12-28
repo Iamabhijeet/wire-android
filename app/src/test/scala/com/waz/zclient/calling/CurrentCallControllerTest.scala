@@ -80,6 +80,7 @@ class CurrentCallControllerTest extends JUnitSuite {
 
   lazy val callExists = controller.glob.activeCall
 
+
   @Before
   def setup(): Unit = {
     zMessaging = new MockZMessaging(selfUserId = selfUser.id) {
@@ -125,21 +126,21 @@ class CurrentCallControllerTest extends JUnitSuite {
   @Test
   def channelMatchesTheUpdatedChannel(): Unit = {
     val channel = IncomingAudioCall(oneToOneConv)
-    signalTest(controller.currentChannel)(_ equals (channel.data)) {
+    signalTest(controller.glob.currentChannel)(_ equals (channel.data)) {
       pushChannel(channel)
     }
   }
 
   @Test
   def selfUserMatchesSetThisSelfUser(): Unit = {
-    signalTest(controller.selfUser)(_.id equals (selfUser.id)) {
+    signalTest(controller.glob.selfUser)(_.id equals (selfUser.id)) {
       pushChannel(IncomingAudioCall(oneToOneConv))
     }
   }
 
   @Test
   def isGroupCallForGroupChannel(): Unit = {
-    signalTest(controller.groupCall)(_ == true) {
+    signalTest(controller.glob.groupCall)(_ == true) {
       pushChannel(IncomingAudioCall(groupConv))
     }
   }
@@ -192,21 +193,21 @@ class CurrentCallControllerTest extends JUnitSuite {
 
   @Test
   def outgoingCallSignalReturnsTrueForOutgoingCall(): Unit = {
-    signalTest(controller.outgoingCall) (_ == true) {
+    signalTest(controller.glob.outgoingCall) (_ == true) {
       pushChannel(OutgoingAudioCall(oneToOneConv))
     }
   }
 
   @Test
   def outgoingCallSignalReturnsFalseForOngoingCall(): Unit = {
-    signalTest(controller.outgoingCall) (_ == false) {
+    signalTest(controller.glob.outgoingCall) (_ == false) {
       pushChannel(OngoingAudioCall(oneToOneConv))
     }
   }
 
   @Test
   def outgoingCallSignalReturnsFalseForIncomingCall(): Unit = {
-    signalTest(controller.outgoingCall) (_ == false) {
+    signalTest(controller.glob.outgoingCall) (_ == false) {
       pushChannel(IncomingAudioCall(oneToOneConv))
     }
   }
@@ -261,7 +262,7 @@ class CurrentCallControllerTest extends JUnitSuite {
   //Tests that the tests are set up correctly, more than anything
   @Test
   def ensureWeGetCurrentConvAndVoiceService(): Unit = {
-    signalTest(controller.voiceServiceAndCurrentConvId) {
+    signalTest(controller.glob.v2ServiceAndCurrentConvId) {
       case (vcs, convId) => convId == oneToOneConv.id && vcs == mockVoiceChannelService
     } {
       pushChannel(OngoingVideoCall(oneToOneConv))
