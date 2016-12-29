@@ -22,6 +22,7 @@ import android.animation.ValueAnimator.AnimatorUpdateListener
 import android.graphics._
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import com.waz.model.AssetData.{IsImage, IsVideo}
 import com.waz.model._
 import com.waz.service.ZMessaging
 import com.waz.service.assets.AssetService.BitmapResult
@@ -204,7 +205,13 @@ class ImageController(implicit inj: Injector) extends Injectable {
 
   val zMessaging = inject[Signal[ZMessaging]]
 
-  def imageData(id: AssetId) = zMessaging.flatMap { _.assetsStorage.signal(id) }
+  def imageData(id: AssetId) = zMessaging.flatMap {
+    zms => zms.assetsStorage.signal(id).flatMap {
+      case a@IsImage() => Signal.const(a)
+      case a@IsVideo() => a.previewId.fold(Signal.const(AssetData.Empty))(zms.assetsStorage.signal)
+      case _ => Signal.const(AssetData.Empty)
+    }
+  }
 
   def imageSignal(id: AssetId, width: Int): Signal[BitmapResult] =
     imageSignal(id, Regular(width))
