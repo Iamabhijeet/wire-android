@@ -17,23 +17,30 @@
  */
 package com.waz.zclient.conversation
 
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.View.{OnClickListener, OnLayoutChangeListener, OnTouchListener}
 import android.view._
 import com.waz.model.{AssetData, AssetId}
+import com.waz.service.ZMessaging
+import com.waz.service.assets.AssetService.BitmapResult
+import com.waz.service.assets.AssetService.BitmapResult.BitmapLoaded
+import com.waz.service.images.BitmapSignal
 import com.waz.threading.Threading
+import com.waz.ui.MemoryImageCache.BitmapRequest.Single
 import com.waz.utils.events.Signal
 import com.waz.zclient.pages.BaseFragment
-import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 import com.waz.zclient.ui.text.GlyphTextView
 import com.waz.zclient.utils.ViewUtils
 import com.waz.zclient.views.images.TouchImageView
+import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 
 class SingleImageCollectionFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener {
 
   lazy val collectionController = getControllerFactory.getCollectionsController
+
+  lazy val zms = inject[Signal[ZMessaging]]
+  lazy val assetsStorage = zms.map(_.assetsStorage)
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
     val view = inflater.inflate(R.layout.fragment_single_image_collections, container, false)
@@ -82,13 +89,23 @@ class SingleImageCollectionFragment extends BaseFragment[CollectionFragment.Cont
 
   override def onBackPressed(): Boolean = true
 
-  def setAsset(assetId: AssetId): Unit = setAsset(collectionController.assetSignal(assetId), collectionController.bitmapSignal)
 
-  private def setAsset(asset: Signal[AssetData], bitmap: (AssetId, Int) => Signal[Option[Bitmap]]): Unit = {
+  private def loadBitmap(assetId: AssetId, width: Int)  = zms.flatMap { zms =>
+    zms.assetsStorage.signal(assetId).flatMap {
+      case data@AssetData.IsImage() => BitmapSignal(data, Single(width), zms.imageLoader, zms.imageCache)
+      case _ => Signal.empty[BitmapResult]
+    }.map{
+      case BitmapLoaded(bmp, _) => Option(bmp)
+      case _ => None
+    }
+  }
+
+  def setAsset(assetId: AssetId): Unit = {
+    val assetSignal = assetsStorage.flatMap(_.signal(assetId))
     val imageView: TouchImageView = ViewUtils.getView(getView, R.id.tiv__image_view)
     imageView.setImageBitmap(null)
     imageView.setAlpha(0f)
-    asset.flatMap(a => bitmap(a.id, getView.getWidth)).on(Threading.Ui) {
+    assetSignal.flatMap(a => loadBitmap(a.id, getView.getWidth)).on(Threading.Ui) {
       case Some(b) =>
         imageView.setImageBitmap(b)
         imageView.animate

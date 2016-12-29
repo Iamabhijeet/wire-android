@@ -40,7 +40,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:textColor="@color/black"
+            android:textColor="?wirePrimaryTextColor"
             android:textSize="@dimen/wire__text_size__small"
             app:font="@string/wire__typeface__light"
             />
@@ -49,7 +49,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
-            android:textColor="@color/wire__text_color_secondary_light_selector"
+            android:textColor="?wireSecondaryTextColor"
             android:textSize="@dimen/wire__text_size__small"
             app:font="@string/wire__typeface__light"
             />

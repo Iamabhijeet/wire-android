@@ -93,6 +93,8 @@
 
     <color name="yorgos">#FF4A4A4A</color>
 
+    <color name="lightest_graphite">#FFCFD8DC</color>
+
     <color name="ephemera">#FFFF5000</color>
     <color name="ephemera_dimmed">#3DFF5000</color>
 
@@ -126,6 +128,9 @@
     <color name="separator_dark">@color/white_24</color>
     <color name="separator_light">@color/light_graphite_40</color>
 
+    <color name="separator_dark_solid">@color/graphite</color>
+    <color name="separator_light_solid">@color/lightest_graphite</color>
+
     <color name="text__secondary_dark__40">@color/white_40</color>
     <color name="text__secondary_dark">@color/white_40</color>
     <color name="text__primary_dark_40">@color/white_40</color>
@@ -141,9 +146,6 @@
 
     <color name="text__primary_disabled_dark">@color/white_32</color>
     <color name="text__primary_disabled_light">@color/black_24</color>
-
-    <!-- Collections -->
-    <color name="collections_header_background">#FFE3E7EA</color>
 
     <!--  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     STILL UNSORTED:

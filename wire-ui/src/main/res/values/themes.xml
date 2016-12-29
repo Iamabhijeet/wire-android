@@ -122,6 +122,7 @@
 
         <item name="wireDivider">@style/common__divider__dark</item>
         <item name="wireDividerColor">@color/separator_dark</item>
+        <item name="wireDividerColorSolid">@color/separator_dark_solid</item>
         <item name="tabIndicatorLabel">@style/common__tab_indicator_label__dark</item>
 
         <!-- Media Player -->
@@ -264,6 +265,7 @@
 
         <item name="wireDivider">@style/common__divider__light</item>
         <item name="wireDividerColor">@color/separator_light</item>
+        <item name="wireDividerColorSolid">@color/separator_light_solid</item>
         <item name="tabIndicatorLabel">@style/common__tab_indicator_label__light</item>
 
         <!-- Media Player -->

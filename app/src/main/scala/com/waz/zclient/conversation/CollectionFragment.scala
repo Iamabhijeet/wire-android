@@ -210,7 +210,7 @@ object CollectionFragment {
 
   val TAG = CollectionFragment.getClass.getSimpleName
 
-  val MAX_DELTA_TOUCH = 50
+  val MAX_DELTA_TOUCH = 30
 
   def newInstance() = new CollectionFragment
 

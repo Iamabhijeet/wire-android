@@ -18,27 +18,32 @@
 package com.waz.zclient.conversation
 
 import android.content.Context
-import android.support.v4.content.ContextCompat
+import android.graphics.Bitmap
 import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.RecyclerView.{AdapterDataObserver, ViewHolder}
 import android.util.AttributeSet
 import android.view.View.OnClickListener
 import android.view.{LayoutInflater, View, ViewGroup}
-import android.widget.{FrameLayout, LinearLayout, TextView}
+import android.widget.{LinearLayout, TextView}
 import com.waz.ZLog._
 import com.waz.api.Message
+import com.waz.bitmap.BitmapUtils
 import com.waz.model._
+import com.waz.service.ZMessaging
+import com.waz.service.assets.AssetService.BitmapResult
+import com.waz.service.assets.AssetService.BitmapResult.BitmapLoaded
+import com.waz.service.images.BitmapSignal
 import com.waz.threading.Threading
-import com.waz.utils.events.{EventContext, Signal, SourceSignal}
+import com.waz.ui.MemoryImageCache.BitmapRequest.Single
+import com.waz.utils.events.{EventContext, Signal}
 import com.waz.utils.returning
 import com.waz.zclient.conversation.CollectionAdapter._
-import com.waz.zclient.messages.MessageView.MsgBindOptions
-import com.waz.zclient.messages.MessageViewPart
 import com.waz.zclient.pages.main.conversation.views.AspectRatioImageView
 import com.waz.zclient.ui.text.GlyphTextView
 import com.waz.zclient.ui.utils.ResourceUtils
 import com.waz.zclient.utils.ViewUtils
-import com.waz.zclient.{Injectable, Injector, R}
+import com.waz.zclient.views.{CollectionItemView, FileViewHolder, LinkPreviewViewHolder, SimpleLinkViewHolder}
+import com.waz.zclient.{Injectable, Injector, R, ViewHelper}
 import org.threeten.bp._
 import org.threeten.bp.temporal.ChronoUnit
 
@@ -147,7 +152,7 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
   override def onBindViewHolder(holder: ViewHolder, position: Int): Unit = {
     holder match {
       case f: FileViewHolder => messageDataForPostion(position, _files).foreach(md => f.setMessageData(md))
-      case c: CollViewHolder => messageDataForPostion(position, _images).foreach(md => c.setMessageData(md, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
+      case c: CollectionImageViewHolder => messageDataForPostion(position, _images).foreach(md => c.setMessageData(md, screenWidth / columns, ResourceUtils.getRandomAccentColor(context)))
       case l: LinkPreviewViewHolder => messageDataForPostion(position, _links).foreach(md => l.setMessageData(md))
       case l: SimpleLinkViewHolder => messageDataForPostion(position, _links).foreach(md => l.setMessageData(md))
     }
@@ -215,17 +220,23 @@ class CollectionAdapter(screenWidth: Int, columns: Int, ctrler: ICollectionsCont
 
   override def onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
     viewType match {
-      case CollectionAdapter.VIEW_TYPE_FILE => FileViewHolder(inflateCollectionItemView(R.layout.collection_file_asset, parent), ctrler)
-      case CollectionAdapter.VIEW_TYPE_IMAGE => CollViewHolder(LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_image, parent, false).asInstanceOf[AspectRatioImageView], imageListener, ctrler)
-      case CollectionAdapter.VIEW_TYPE_LINK_PREVIEW => LinkPreviewViewHolder(inflateCollectionItemView(R.layout.collection_link_preview, parent), ctrler)
-      case CollectionAdapter.VIEW_TYPE_SIMPLE_LINK => SimpleLinkViewHolder(inflateCollectionItemView(R.layout.collection_text, parent), ctrler)
+      case CollectionAdapter.VIEW_TYPE_FILE => FileViewHolder(inflateCollectionItemView(R.layout.collection_file_asset, parent))
+      case CollectionAdapter.VIEW_TYPE_IMAGE => CollectionImageViewHolder(inflateCollectionImageView(parent), imageListener)
+      case CollectionAdapter.VIEW_TYPE_LINK_PREVIEW => LinkPreviewViewHolder(inflateCollectionItemView(R.layout.collection_link_preview, parent))
+      case CollectionAdapter.VIEW_TYPE_SIMPLE_LINK => SimpleLinkViewHolder(inflateCollectionItemView(R.layout.collection_text, parent))
       case _ => returning(null.asInstanceOf[ViewHolder])(_ => error(s"Unexpected ViewType: $viewType"))
     }
 
-  private def inflateCollectionItemView(contentId: Int, parent: ViewGroup): LinearLayout = {
-    val view = LayoutInflater.from(parent.getContext).inflate(R.layout.row_collection_item_view, parent, false).asInstanceOf[LinearLayout]
-    val container:FrameLayout = ViewUtils.getView(view, R.id.fl__collections__content_layout)
-    LayoutInflater.from(view.getContext).inflate(contentId, container, true)
+  private def inflateCollectionImageView(parent: ViewGroup): CollectionImageView = {
+    val view = new CollectionImageView(context)
+    parent.addView(view)
+    view
+  }
+
+  private def inflateCollectionItemView(contentId: Int, parent: ViewGroup): CollectionItemView = {
+    val view = new CollectionItemView(context)
+    view.inflateContent(contentId)
+    parent.addView(view)
     view
   }
 
@@ -389,72 +400,54 @@ object CollectionAdapter {
     lazy val arrowView: GlyphTextView = ViewUtils.getView(this, R.id.gtv__arrow)
 
     LayoutInflater.from(context).inflate(R.layout.row_collection_header, this, true)
-    setBackgroundColor(ContextCompat.getColor(context, R.color.collections_header_background))
   }
 
-  case class CollViewHolder(view: AspectRatioImageView, listener: OnClickListener, collectionsController: ICollectionsController)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
-    view.setOnClickListener(listener)
+  class CollectionImageView(context: Context) extends AspectRatioImageView(context) with ViewHelper {
+    val zms = inject[Signal[ZMessaging]]
+    val messageData = Signal[MessageData]()
+    val width = Signal[Int]()
 
-    var width: SourceSignal[Int] = Signal(0)
-    val assetId: SourceSignal[AssetId] = Signal()
-    assetId.zip(width).flatMap(idAndWidth => collectionsController.bitmapSquareSignal(idAndWidth._1, idAndWidth._2)).on(Threading.Ui){
-      case Some(b) => view.setImageBitmap(b)
+    messageData.zip(width).flatMap{
+      case (msg, w) =>
+        zms.flatMap { zms =>
+          zms.assetsStorage.signal(msg.assetId).flatMap {
+            case data@AssetData.IsImage() => BitmapSignal(data, Single(w), zms.imageLoader, zms.imageCache)
+            case _ => Signal.empty[BitmapResult]
+          }.map{
+            case BitmapLoaded(bmp, _) => Option(BitmapUtils.cropRect(bmp, w))
+            case _ => None
+          }
+        }
+      case _ => Signal[Option[Bitmap]](None)
+    }.on(Threading.Ui) {
+      case Some(b) => setImageBitmap(b)
       case _ =>
     }
 
     def setMessageData(messageData: MessageData, width: Int, color: Int) = {
-      view.setTag(messageData)
-      if (assetId.currentValue.exists(_ != messageData.assetId) || this.width.currentValue.exists(_ != width)) {
-        view.setAspectRatio(1)
-        view.setImageBitmap(null)
-        view.setBackgroundColor(color)
-        ViewUtils.setWidth(view, width)
-        ViewUtils.setHeight(view, width)
-        view.setAlpha(0f)
-        view.animate
+      if (this.messageData.currentValue.exists(_.assetId != messageData.assetId) || this.width.currentValue.exists(_ != width)) {
+        setAspectRatio(1)
+        setImageBitmap(null)
+        setBackgroundColor(color)
+        ViewUtils.setWidth(this, width)
+        ViewUtils.setHeight(this, width)
+        setAlpha(0f)
+        animate
           .alpha(1f)
-          .setDuration(view.getContext.getResources.getInteger(R.integer.content__image__directly_final_duration))
+          .setDuration(context.getResources.getInteger(R.integer.content__image__directly_final_duration))
           .start()
       }
       this.width ! width
-      assetId ! messageData.assetId
+      this.messageData ! messageData
     }
   }
 
-  abstract class CollectionItemViewHolder(baseView: LinearLayout, collectionsController: ICollectionsController)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(baseView){
-    val messageTime: TextView = ViewUtils.getView(baseView, R.id.ttv__collection_item__time)
-    val messageUser: TextView = ViewUtils.getView(baseView, R.id.ttv__collection_item__user_name)
-    val messageViewPart = ViewUtils.getView(baseView, R.id.fl__collections__content_layout).asInstanceOf[FrameLayout].getChildAt(0).asInstanceOf[MessageViewPart]
+  case class CollectionImageViewHolder(view: CollectionImageView, listener: OnClickListener)(implicit eventContext: EventContext) extends RecyclerView.ViewHolder(view) {
+    view.setOnClickListener(listener)
 
-    private val userId: SourceSignal[UserId] = Signal()
-    userId.flatMap(uid => collectionsController.userSignal(uid)).on(Threading.Ui) {
-      user => messageUser.setText(user.name)
-    }
-
-    def setMessageData(messageData: MessageData, content: Option[MessageContent]): Unit = {
-      baseView.setTag(messageData)
-      messageTime.setText(LocalDateTime.ofInstant(messageData.time, ZoneId.systemDefault()).toLocalDate.toString)
-      if (userId.currentValue.exists(_ != messageData.userId)) {
-        messageUser.setText("")
-      }
-      userId ! messageData.userId
-      val opts = MsgBindOptions(0, false, false, false, false, 0, ConversationData.ConversationType.Unknown)
-      messageViewPart.set(messageData, content, opts)
-    }
-
-    def setMessageData(messageData: MessageData): Unit = {
-      setMessageData(messageData, None)
+    def setMessageData(messageData: MessageData, width: Int, color: Int) = {
+      view.setTag(messageData)
+      view.setMessageData(messageData, width, color)
     }
   }
-
-  case class FileViewHolder(view: LinearLayout, collectionsController: ICollectionsController)(implicit eventContext: EventContext) extends CollectionItemViewHolder(view, collectionsController)
-
-  case class LinkPreviewViewHolder(view: LinearLayout, collectionsController: ICollectionsController)(implicit eventContext: EventContext) extends CollectionItemViewHolder(view, collectionsController) {
-    override def setMessageData(messageData: MessageData): Unit = {
-      val content = messageData.content.find(_.openGraph.nonEmpty)
-      setMessageData(messageData, content)
-    }
-  }
-
-  case class SimpleLinkViewHolder(view: LinearLayout, collectionsController: ICollectionsController)(implicit eventContext: EventContext) extends CollectionItemViewHolder(view, collectionsController)
 }

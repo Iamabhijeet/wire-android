@@ -23,6 +23,7 @@
        android:layout_width="match_parent"
        android:layout_height="wrap_content"
        android:orientation="horizontal"
+       android:background="?wireDividerColorSolid"
     >
 
     <com.waz.zclient.ui.text.TypefaceTextView
@@ -47,8 +48,7 @@
         android:gravity="center_vertical"
         android:textSize="@dimen/wire__text_size__small"
         app:font="@string/wire__typeface__thin"
-        android:visibility="visible"
-        android:text="All 1234"/>
+        android:visibility="visible"/>
 
     <com.waz.zclient.ui.text.GlyphTextView
         android:id="@+id/gtv__arrow"

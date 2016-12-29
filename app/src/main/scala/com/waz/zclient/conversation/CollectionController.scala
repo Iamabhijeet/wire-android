@@ -20,19 +20,13 @@ package com.waz.zclient.conversation
 import java.util
 import java.util.concurrent.CopyOnWriteArraySet
 
-import android.graphics.Bitmap
 import com.waz.ZLog._
 import com.waz.api.{IConversation, Message, impl}
-import com.waz.bitmap.BitmapUtils
 import com.waz.content.MessagesStorage
 import com.waz.model.MessageData.MessageDataDao
 import com.waz.model._
 import com.waz.service.ZMessaging
-import com.waz.service.assets.AssetService.BitmapResult
-import com.waz.service.assets.AssetService.BitmapResult.BitmapLoaded
-import com.waz.service.images.BitmapSignal
 import com.waz.threading.SerialDispatchQueue
-import com.waz.ui.MemoryImageCache.BitmapRequest.Single
 import com.waz.utils.events.{Signal, SourceSignal}
 import com.waz.zclient.controllers.collections.CollectionsObserver
 import com.waz.zclient.conversation.CollectionController.Type
@@ -46,14 +40,6 @@ trait ICollectionsController {
   val conversationName: Signal[String]
 
   def messagesByType(`type`: CollectionController.Type, limit: Int = 0): Signal[Seq[MessageData]]
-
-  def assetSignal(id: AssetId): Signal[AssetData]
-
-  def userSignal(id: UserId): Signal[UserData]
-
-  def bitmapSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]]
-
-  def bitmapSquareSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]]
 
   def openCollection(): Unit
 
@@ -95,10 +81,6 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
     Signal.future(Future.sequence(tpe.msgTypes.map(t => loadMessagesByType(convId, msgs, limit, t))).map(_.flatten))
   }
 
-  override def assetSignal(id: AssetId) = assetStorage.flatMap(_.signal(id))
-
-  override def userSignal(id: UserId) = zms.map(_.usersStorage).flatMap(_.signal(id))
-
   val conversation = zms.zip(currentConv) flatMap { case (zms, convId) => zms.convsStorage.signal(convId) }
 
   override val conversationName = conversation map (data => if (data.convType == IConversation.Type.GROUP) data.name.filter(!_.isEmpty).getOrElse(data.generatedName) else data.generatedName)
@@ -108,23 +90,6 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
   //TODO - consider making messageType a Seq and passing that logic down to SE - (if we don't use a cursor)
   private def loadMessagesByType(conv: ConvId, storage: MessagesStorage, limit: Int, messageType: Message.Type) = {
     storage.find(m => m.convId == conv && m.msgType == messageType && !m.isEphemeral, MessageDataDao.findByType(conv, messageType)(_), identity).map(results => results.sortBy(_.time).reverse.take(if (limit > 0) limit else results.length))
-  }
-
-  private def loadBitmap(assetId: AssetId, width: Int)  = zms.flatMap { zms =>
-    zms.assetsStorage.signal(assetId).flatMap {
-      case data@AssetData.IsImage() => BitmapSignal(data, Single(width), zms.imageLoader, zms.imageCache)
-      case _ => Signal.empty[BitmapResult]
-    }
-  }
-
-  override def bitmapSquareSignal(assetId: AssetId, width: Int) = loadBitmap(assetId: AssetId, width: Int).map {
-    case BitmapLoaded(bmp, _) => Option(BitmapUtils.cropRect(bmp, width))
-    case _ => None
-  }
-
-  override def bitmapSignal(assetId: AssetId, width: Int) = loadBitmap(assetId: AssetId, width: Int).map {
-    case BitmapLoaded(bmp, _) => Option(bmp)
-    case _ => None
   }
 
   private def performOnObservers(func: (CollectionsObserver) => Unit) = {
@@ -158,14 +123,6 @@ class StubCollectionController extends ICollectionsController{
   override def messagesByType(`type`: Type, limit: Int): Signal[Seq[MessageData]] = Signal(Seq())
 
   override def openCollection: Unit = {}
-
-  override def assetSignal(id: AssetId): Signal[AssetData] = Signal.empty
-
-  override def userSignal(id: UserId): Signal[UserData] = Signal.empty
-
-  override def bitmapSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]] = Signal(None)
-
-  override def bitmapSquareSignal(assetId: AssetId, width: Int): Signal[Option[Bitmap]] = Signal(None)
 
   override def closeCollection: Unit = {}
 

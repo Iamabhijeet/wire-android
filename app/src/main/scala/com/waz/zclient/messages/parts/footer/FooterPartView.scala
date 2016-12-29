@@ -25,7 +25,6 @@ import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.{View, ViewGroup}
 import android.widget.{FrameLayout, TextView}
-import com.waz.ZLog._
 import com.waz.ZLog.ImplicitTag._
 import com.waz.model.{MessageContent, MessageData, MessageId}
 import com.waz.service.messages.MessageAndLikes

@@ -22,7 +22,7 @@
               android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:background="@color/white"
+              style="?wireBackground"
               android:clickable="true"
               android:focusable="true" >
 
@@ -36,7 +36,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:background="@color/collections_header_background">
+        android:background="?wireDividerColorSolid">
 
         <com.waz.zclient.ui.text.GlyphTextView
             android:id="@+id/gtv__share_button"

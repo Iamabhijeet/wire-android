@@ -239,5 +239,6 @@
     </declare-styleable>
 
     <attr name="wireDividerColor" format="color"/>
+    <attr name="wireDividerColorSolid" format="color"/>
 
 </resources>
