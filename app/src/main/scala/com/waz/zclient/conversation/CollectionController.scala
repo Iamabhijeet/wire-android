@@ -21,7 +21,7 @@ import java.util
 import java.util.concurrent.CopyOnWriteArraySet
 
 import com.waz.ZLog._
-import com.waz.api.{IConversation, Message, impl}
+import com.waz.api.{IConversation, Message}
 import com.waz.content.MessagesStorage
 import com.waz.model.MessageData.MessageDataDao
 import com.waz.model._

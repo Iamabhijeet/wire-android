@@ -425,12 +425,12 @@ object CollectionAdapter {
     }
 
     def setMessageData(messageData: MessageData, width: Int, color: Int) = {
+      setAspectRatio(1)
+      ViewUtils.setWidth(this, width)
+      ViewUtils.setHeight(this, width)
       if (this.messageData.currentValue.exists(_.assetId != messageData.assetId) || this.width.currentValue.exists(_ != width)) {
-        setAspectRatio(1)
         setImageBitmap(null)
         setBackgroundColor(color)
-        ViewUtils.setWidth(this, width)
-        ViewUtils.setHeight(this, width)
         setAlpha(0f)
         animate
           .alpha(1f)

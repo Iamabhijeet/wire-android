@@ -17,8 +17,6 @@
  */
 package com.waz.zclient.conversation
 
-import java.util
-
 import android.app.ProgressDialog
 import android.content.{Context, DialogInterface}
 import android.database.DataSetObserver
@@ -28,29 +26,19 @@ import android.support.v7.app.AlertDialog
 import android.text.TextUtils
 import android.text.format.Formatter
 import android.util.AttributeSet
-import android.view.LayoutInflater
-import android.view.View
+import android.view.{LayoutInflater, View, ViewGroup}
 import android.view.View.OnClickListener
-import android.view.ViewGroup
-import android.widget.RadioGroup.OnCheckedChangeListener
 import android.widget._
 import com.waz.api.ConversationsList.ConversationsListState
 import com.waz.api._
-import com.waz.model.{AssetData, AssetId, AssetType, MessageId}
-import com.waz.service.ZMessaging
+import com.waz.model.{AssetId, AssetType}
 import com.waz.threading.Threading
-import com.waz.utils.events.Signal
 import com.waz.zclient.controllers.AssetsController
-import com.waz.zclient.controllers.sharing.SharedContentType
 import com.waz.zclient.core.stores.conversation.{ConversationChangeRequester, ConversationStoreObserver}
-import com.waz.zclient.messages.MessagesController
-import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 import com.waz.zclient.pages.BaseFragment
 import com.waz.zclient.ui.text.{GlyphTextView, TypefaceTextView}
-import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.ViewUtils
-
-import scala.collection.immutable.HashSet
+import com.waz.zclient.{FragmentHelper, OnBackPressedListener, R}
 
 
 class CollectionShareFragment extends BaseFragment[CollectionFragment.Container] with FragmentHelper with OnBackPressedListener {
@@ -99,17 +87,17 @@ class CollectionShareFragment extends BaseFragment[CollectionFragment.Container]
 
   //TODO this was copied from ConversationFragment...
   private val assetErrorHandler: MessageContent.Asset.ErrorHandler = new MessageContent.Asset.ErrorHandler() {
-    def noWifiAndFileIsLarge(sizeInBytes: Long, net: NetworkMode, answer: MessageContent.Asset.Answer) {
+    def noWifiAndFileIsLarge(sizeInBytes: Long, net: NetworkMode, answer: MessageContent.Asset.Answer): Unit = {
       if (getActivity == null) {
         answer.ok()
         return
       }
       val dialog: AlertDialog = ViewUtils.showAlertDialog(getActivity, R.string.asset_upload_warning__large_file__title, R.string.asset_upload_warning__large_file__message_default, R.string.asset_upload_warning__large_file__button_accept, R.string.asset_upload_warning__large_file__button_cancel, new DialogInterface.OnClickListener() {
-        def onClick(dialog: DialogInterface, which: Int) {
+        def onClick(dialog: DialogInterface, which: Int): Unit = {
           answer.ok()
         }
       }, new DialogInterface.OnClickListener() {
-        def onClick(dialog: DialogInterface, which: Int) {
+        def onClick(dialog: DialogInterface, which: Int): Unit = {
           answer.cancel()
         }
       })
