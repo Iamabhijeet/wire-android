@@ -31,6 +31,8 @@ import android.view.ViewGroup;
 import com.waz.api.IConversation;
 import com.waz.api.Message;
 import com.waz.api.User;
+import com.waz.model.AssetId;
+import com.waz.model.MessageData;
 import com.waz.zclient.OnBackPressedListener;
 import com.waz.zclient.R;
 import com.waz.zclient.controllers.accentcolor.AccentColorObserver;
@@ -43,6 +45,7 @@ import com.waz.zclient.controllers.navigation.Page;
 import com.waz.zclient.controllers.onboarding.OnboardingControllerObserver;
 import com.waz.zclient.controllers.singleimage.SingleImageObserver;
 import com.waz.zclient.conversation.CollectionFragment;
+import com.waz.zclient.conversation.CollectionShareFragment;
 import com.waz.zclient.core.controllers.tracking.attributes.RangedAttribute;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.main.backgroundmain.views.BackgroundFrameLayout;
@@ -167,7 +170,7 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
 
         if (getChildFragmentManager().getBackStackEntryCount() > 0) {
             Fragment topFragment = getChildFragmentManager().findFragmentByTag(getChildFragmentManager().getBackStackEntryAt(
-                0).getName());
+                getChildFragmentManager().getBackStackEntryCount() - 1).getName());
             if (topFragment instanceof SingleImageFragment) {
                 return ((SingleImageFragment) topFragment).onBackPressed();
             } else if (topFragment instanceof VideoPlayerFragment) {
@@ -390,8 +393,19 @@ public class MainPhoneFragment extends BaseFragment<MainPhoneFragment.Container>
     }
 
     @Override
-    public void forwardCollectionMessage(Message message) {
+    public void shareCollectionItem(MessageData messageData) {
+        getChildFragmentManager().beginTransaction()
+                                .add(R.id.fl__overlay_container,
+                                    CollectionShareFragment.newInstance(messageData.assetId()),
+                                    CollectionShareFragment.TAG())
+                                .addToBackStack(CollectionShareFragment.TAG())
+                                .commit();
+    }
 
+    @Override
+    public void closeCollectionShare() {
+        getChildFragmentManager().popBackStackImmediate(CollectionShareFragment.TAG(),
+            FragmentManager.POP_BACK_STACK_INCLUSIVE);
     }
 
     @Override

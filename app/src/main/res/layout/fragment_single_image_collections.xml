@@ -41,9 +41,11 @@
         <com.waz.zclient.ui.text.GlyphTextView
             android:id="@+id/gtv__share_button"
             android:layout_centerInParent="true"
+            android:padding="@dimen/wire__padding__8"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/wire__text_size__medium"
+            android:layout_height="match_parent"
+            android:textSize="@dimen/wire__text_size__regular"
+            android:gravity="center"
             android:text="@string/glyph__share"/>
 
     </RelativeLayout>

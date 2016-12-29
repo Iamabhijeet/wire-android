@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><!--
+<!--
 
     Wire
     Copyright (C) 2016 Wire Swiss GmbH
@@ -18,29 +18,29 @@
 
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
               xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:clickable="true"
               android:orientation="vertical"
-              style="?wireBackground"
-    >
+              tools:context="com.waz.zclient.conversation.CollectionShareFragment"
+              android:background="@color/black_80"
+              android:clickable="true">
 
     <android.support.v7.widget.Toolbar
         android:id="@+id/t_collection_toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:clickable="true"
+        android:clickable="false"
         app:contentInsetStart="@dimen/content__padding_left"
         style="?conversationToolbar"
         >
 
-
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_gravity="start|center_vertical"
-            android:gravity="center_vertical"
+            android:layout_gravity="center"
+            android:gravity="center"
             android:orientation="vertical"
             >
 
@@ -48,68 +48,54 @@
                 android:id="@+id/tv__collection_toolbar__content"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/wire__padding__regular"
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:background="@null"
+                android:text="@string/collection_send_to"
                 app:font="@string/wire__typeface__bold"
                 style="?conversationToolbar"
                 />
 
-            <com.waz.zclient.ui.text.TypefaceTextView
-                android:id="@+id/tv__collection_toolbar__name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/wire__padding__regular"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:background="@null"
-                style="?conversationToolbar"
-                />
-
         </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:gravity="center"
+            android:orientation="vertical"
+            >
+            <com.waz.zclient.ui.text.GlyphTextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="@string/glyph__close"/>
+            </LinearLayout>
 
     </android.support.v7.widget.Toolbar>
 
-    <FrameLayout
+    <ListView
+        android:id="@+id/lv__conversation_list"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:choiceMode="multipleChoice"/>
 
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/rv__collection"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="?wireDividerColorSolid">
 
-        <LinearLayout
-            android:id="@+id/ll__collection__empty"
-            android:layout_width="match_parent"
+        <com.waz.zclient.ui.text.GlyphTextView
+            android:id="@+id/gtv__share_button"
+            android:layout_centerInParent="true"
+            android:padding="@dimen/wire__padding__8"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:orientation="vertical"
+            android:textSize="@dimen/wire__text_size__regular"
             android:gravity="center"
-            >
+            android:text="@string/glyph__send"/>
 
-            <com.waz.zclient.ui.text.GlyphTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/glyph__library"
-                android:textSize="@dimen/wire__text_size__insane"
-                android:padding="@dimen/wire__padding__regular"
-                />
-
-            <com.waz.zclient.ui.text.TypefaceTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/collection_empty"
-                />
-
-        </LinearLayout>
-
-        <FrameLayout
-            android:id="@+id/fl__collection_content"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-
-    </FrameLayout>
+    </RelativeLayout>
 
 </LinearLayout>

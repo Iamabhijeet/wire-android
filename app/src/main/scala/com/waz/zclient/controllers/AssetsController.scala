@@ -73,6 +73,8 @@ class AssetsController(implicit context: Context, inj: Injector, ec: EventContex
 
   def assetSignal(mes: Signal[MessageData]) = mes.flatMap(m => assets.flatMap(_.assetSignal(m.assetId)))
 
+  def assetSignal(assetId: AssetId) = assets.flatMap(_.assetSignal(assetId))
+
   def downloadProgress(id: AssetId) = assets.flatMap(_.downloadProgress(id))
 
   def uploadProgress(id: AssetId) = assets.flatMap(_.uploadProgress(id))

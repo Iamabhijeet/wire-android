@@ -49,7 +49,9 @@ trait ICollectionsController {
 
   def requestNextItem(): Unit
 
-  def shareMessageData(messageData: MessageData): Unit
+  def openShareCollectionItem(messageData: MessageData): Unit
+
+  def closeShareCollectionItem(): Unit
 
   def addObserver(collectionsObserver: CollectionsObserver): Unit
 
@@ -108,7 +110,9 @@ class CollectionController(implicit injector: Injector) extends Injectable with 
 
   override def requestNextItem(): Unit = performOnObservers(_.nextItemRequested())
 
-  override def shareMessageData(messageData: MessageData): Unit = performOnObservers(_.forwardCollectionMessage(new impl.Message(messageData.id, messageData, IndexedSeq(), false)(ZMessaging.currentUi)))
+  override def openShareCollectionItem(messageData: MessageData): Unit = performOnObservers(_.shareCollectionItem(messageData))
+
+  override def closeShareCollectionItem(): Unit = {performOnObservers(_.closeCollectionShare())}
 
   override def addObserver(collectionsObserver: CollectionsObserver): Unit = observers.add(collectionsObserver)
 
@@ -130,7 +134,9 @@ class StubCollectionController extends ICollectionsController{
 
   override def requestNextItem(): Unit = {}
 
-  override def shareMessageData(messageData: MessageData): Unit = {}
+  override def openShareCollectionItem(messageData: MessageData): Unit = {}
+
+  override def closeShareCollectionItem(): Unit = {}
 
   override def addObserver(collectionsObserver: CollectionsObserver): Unit = {}
 

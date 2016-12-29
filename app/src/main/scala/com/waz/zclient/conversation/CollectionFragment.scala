@@ -90,10 +90,10 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
   }
 
   private def textIdForContentMode(contentMode: Int) = contentMode match {
-    case CollectionAdapter.VIEW_MODE_IMAGES => R.string.library_header_pictures
-    case CollectionAdapter.VIEW_MODE_FILES => R.string.library_header_files
-    case CollectionAdapter.VIEW_MODE_LINKS => R.string.library_header_links
-    case _ => R.string.library_header_all
+    case CollectionAdapter.VIEW_MODE_IMAGES => R.string.collection_header_pictures
+    case CollectionAdapter.VIEW_MODE_FILES => R.string.collection_header_files
+    case CollectionAdapter.VIEW_MODE_LINKS => R.string.collection_header_links
+    case _ => R.string.collection_header_all
   }
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View = {
@@ -189,7 +189,9 @@ class CollectionFragment extends BaseFragment[CollectionFragment.Container] with
 
   override def openCollection(): Unit = {}
 
-  override def forwardCollectionMessage(message: Message): Unit = {}
+  override def shareCollectionItem(messageData: MessageData): Unit = {}
+
+  override def closeCollectionShare(): Unit = {}
 
   override def previousItemRequested(): Unit =
     controller.focusedItem mutate {

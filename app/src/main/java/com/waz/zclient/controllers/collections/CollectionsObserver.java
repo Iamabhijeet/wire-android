@@ -17,7 +17,7 @@
  */
 package com.waz.zclient.controllers.collections;
 
-import com.waz.api.Message;
+import com.waz.model.MessageData;
 
 public interface CollectionsObserver {
 
@@ -25,7 +25,9 @@ public interface CollectionsObserver {
 
     void closeCollection();
 
-    void forwardCollectionMessage(Message message);
+    void shareCollectionItem(MessageData messageData);
+
+    void closeCollectionShare();
 
     void nextItemRequested();
 

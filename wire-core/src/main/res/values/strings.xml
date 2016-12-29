@@ -1099,10 +1099,11 @@
         <item quantity="other">%1$d seconds</item>
     </plurals>
 
-    <string name="library_header_all">LIBRARY</string>
-    <string name="library_header_pictures">PICTURES</string>
-    <string name="library_header_files">FILES</string>
-    <string name="library_header_links">LINKS</string>
-    <string name="library_empty">NO ITEMS IN LIBRARY</string>
+    <string name="collection_header_all">COLLECTION</string>
+    <string name="collection_header_pictures">PICTURES</string>
+    <string name="collection_header_files">FILES</string>
+    <string name="collection_header_links">LINKS</string>
+    <string name="collection_empty">NO ITEMS IN COLLECTION</string>
+    <string name="collection_send_to">SEND TO…</string>
 
 </resources>

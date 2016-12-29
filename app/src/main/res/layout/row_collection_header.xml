@@ -39,7 +39,8 @@
     <View
         android:layout_width="0dp"
         android:layout_height="32dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:id="@+id/view"/>
 
     <com.waz.zclient.ui.text.TypefaceTextView
         android:id="@+id/ttv__collection_header__count"

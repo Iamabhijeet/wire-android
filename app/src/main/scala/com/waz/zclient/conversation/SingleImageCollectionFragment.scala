@@ -49,7 +49,7 @@ class SingleImageCollectionFragment extends BaseFragment[CollectionFragment.Cont
     shareButton.setOnClickListener(new OnClickListener {
       override def onClick(v: View): Unit = {
         collectionController.focusedItem.currentValue match {
-          case Some(Some(messageData)) => collectionController.shareMessageData(messageData)
+          case Some(Some(messageData)) => collectionController.openShareCollectionItem(messageData)
           case _ =>
         }
       }

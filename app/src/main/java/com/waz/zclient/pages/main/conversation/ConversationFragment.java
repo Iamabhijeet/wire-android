@@ -19,27 +19,19 @@ package com.waz.zclient.pages.main.conversation;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Dialog;
-import android.app.ProgressDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.database.DataSetObserver;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.ShareCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
@@ -53,12 +45,10 @@ import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.widget.AbsListView;
 import android.widget.FrameLayout;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.waz.api.Asset;
 import com.waz.api.AssetFactory;
 import com.waz.api.AssetForUpload;
 import com.waz.api.AudioAssetForUpload;
@@ -81,6 +71,7 @@ import com.waz.api.UpdateListener;
 import com.waz.api.User;
 import com.waz.api.UsersList;
 import com.waz.api.Verification;
+import com.waz.model.MessageData;
 import com.waz.zclient.*;
 import com.waz.zclient.BuildConfig;
 import com.waz.zclient.camera.controllers.GlobalCameraController;
@@ -103,18 +94,11 @@ import com.waz.zclient.controllers.navigation.PagerControllerObserver;
 import com.waz.zclient.controllers.permission.RequestPermissionsObserver;
 import com.waz.zclient.controllers.singleimage.SingleImageObserver;
 import com.waz.zclient.controllers.streammediaplayer.StreamMediaBarObserver;
-import com.waz.zclient.controllers.tracking.events.conversation.CopiedMessageEvent;
-import com.waz.zclient.controllers.tracking.events.conversation.DeletedMessageEvent;
 import com.waz.zclient.controllers.tracking.events.conversation.EditedMessageEvent;
-import com.waz.zclient.controllers.tracking.events.conversation.ForwardedMessageEvent;
-import com.waz.zclient.controllers.tracking.events.conversation.OpenedMessageActionEvent;
-import com.waz.zclient.controllers.tracking.events.conversation.ReactedToMessageEvent;
 import com.waz.zclient.controllers.tracking.events.navigation.OpenedMoreActionsEvent;
-import com.waz.zclient.controllers.userpreferences.IUserPreferencesController;
 import com.waz.zclient.core.api.scala.ModelObserver;
 import com.waz.zclient.core.controllers.tracking.attributes.OpenedMediaAction;
 import com.waz.zclient.core.controllers.tracking.attributes.RangedAttribute;
-import com.waz.zclient.core.controllers.tracking.events.filetransfer.SavedFileEvent;
 import com.waz.zclient.core.controllers.tracking.events.filetransfer.SelectedTooLargeFileEvent;
 import com.waz.zclient.core.controllers.tracking.events.media.CancelledRecordingAudioMessageEvent;
 import com.waz.zclient.core.controllers.tracking.events.media.OpenedActionHintEvent;
@@ -133,7 +117,6 @@ import com.waz.zclient.core.stores.network.DefaultNetworkAction;
 import com.waz.zclient.core.stores.participants.ParticipantsStoreObserver;
 import com.waz.zclient.messages.MessagesListView;
 import com.waz.zclient.messages.controllers.EditActionSupport;
-import com.waz.zclient.notifications.controllers.ImageNotificationsController;
 import com.waz.zclient.pages.BaseFragment;
 import com.waz.zclient.pages.extendedcursor.ExtendedCursorContainer;
 import com.waz.zclient.pages.extendedcursor.emoji.EmojiKeyboardLayout;
@@ -148,7 +131,6 @@ import com.waz.zclient.pages.main.conversation.views.MessageViewsContainer;
 import com.waz.zclient.pages.main.conversation.views.TypingIndicatorView;
 import com.waz.zclient.pages.main.conversation.views.header.StreamMediaPlayerBarFragment;
 import com.waz.zclient.pages.main.conversation.views.listview.ConversationScrollListener;
-import com.waz.zclient.pages.main.conversation.views.row.message.MessageViewController;
 import com.waz.zclient.pages.main.conversationlist.ConversationListAnimation;
 import com.waz.zclient.pages.main.conversationpager.controller.SlidingPaneObserver;
 import com.waz.zclient.pages.main.onboarding.OnBoardingHintFragment;
@@ -173,7 +155,7 @@ import com.waz.zclient.utils.TrackingUtils;
 import com.waz.zclient.utils.ViewUtils;
 import com.waz.zclient.views.LoadingIndicatorView;
 import com.waz.zclient.views.MentioningFragment;
-import net.hockeyapp.android.ExceptionHandler;
+
 import timber.log.Timber;
 
 import java.util.ArrayList;
@@ -1304,7 +1286,12 @@ public class ConversationFragment extends BaseFragment<ConversationFragment.Cont
     }
 
     @Override
-    public void forwardCollectionMessage(Message message) {
+    public void shareCollectionItem(MessageData messageData) {
+
+    }
+
+    @Override
+    public void closeCollectionShare() {
     }
 
     //////////////////////////////////////////////////////////////////////////////
