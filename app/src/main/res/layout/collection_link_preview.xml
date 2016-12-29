@@ -18,21 +18,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 -->
-<merge
+<com.waz.zclient.messages.parts.WebLinkPartView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
-
-        <com.waz.zclient.ui.text.TypefaceTextView
-            android:id="@+id/ttv__row_collection__link__url"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ellipsize="middle"
-            android:maxLines="1"
-            android:layout_gravity="center_vertical"
-            android:paddingStart="@dimen/wire__padding__8"
-            android:paddingEnd="@dimen/wire__padding__8"
-            android:paddingTop="@dimen/wire__padding__8"
-            android:paddingBottom="@dimen/wire__padding__8"
-            app:font="@string/wire__typeface__light"
-            />
-</merge>
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cv__row_conversation__link_preview__container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="@dimen/content__card__corner_radius"
+    app:cardBackgroundColor="@color/light_graphite_16"
+    app:cardElevation="0dp" />

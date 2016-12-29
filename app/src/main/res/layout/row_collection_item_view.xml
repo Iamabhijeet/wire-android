@@ -55,15 +55,11 @@
             />
     </RelativeLayout>
 
-    <android.support.v7.widget.CardView
-        android:id="@+id/cv__collections__content_card"
+    <FrameLayout
+        android:id="@+id/fl__collections__content_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/wire__padding__4"
-        app:cardCornerRadius="@dimen/content__card__corner_radius"
-        app:cardBackgroundColor="@color/light_graphite_8"
-        app:cardElevation="0dp">
-
-    </android.support.v7.widget.CardView>
+        android:layout_marginTop="@dimen/wire__padding__4">
+    </FrameLayout>
 
 </LinearLayout>
