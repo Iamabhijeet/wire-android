@@ -218,7 +218,7 @@ object MessageView {
         case (TextLike, TextLike)         => 8
         case (TextLike, FileLike)         => 16
         case (FileLike, FileLike)         => 10
-        case (ImageLike, ImageLike)       => 0
+        case (ImageLike, ImageLike)       => 4
         case (FileLike | ImageLike, _) |
              (_, FileLike | ImageLike)    => 10
         case (Rename, _)                  => 24

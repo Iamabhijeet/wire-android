@@ -20,6 +20,7 @@ package com.waz.zclient.messages.parts.assets
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.view.View
 import android.widget.FrameLayout
 import com.waz.threading.Threading
 import com.waz.utils.events.Signal
@@ -29,6 +30,7 @@ import com.waz.zclient.messages.parts.assets.DeliveryState.OtherUploading
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.views.ImageAssetDrawable
 import com.waz.zclient.views.ImageAssetDrawable.State.Loaded
+import com.waz.zclient.utils.RichView
 
 class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) extends FrameLayout(context, attrs, style) with PlayableAsset with ImageLayoutAssetPart {
   def this(context: Context, attrs: AttributeSet) = this(context, attrs, 0)
@@ -37,6 +39,8 @@ class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) exte
   override val tpe: MsgPart = MsgPart.VideoAsset
 
   override def inflate() = inflate(R.layout.message_video_asset_content)
+
+  private val controls = findById[View](R.id.controls)
 
   imageDrawable.state.map {
     case Loaded(_, _, _) => getColor(R.color.white)
@@ -51,6 +55,8 @@ class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) exte
         case _ => imageDrawable
       } orElse Signal.const[Drawable](imageDrawable)
   }
+
+  padding.on(Threading.Ui)(controls.setMargin)
 
   bg.on(Threading.Ui) { setBackground }
 
