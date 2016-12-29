@@ -18,16 +18,22 @@
 package com.waz.zclient
 
 import android.content.res.TypedArray
-import android.graphics.LightingColorFilter
+import android.graphics.{LightingColorFilter, Rect}
 import android.graphics.drawable.LayerDrawable
 import android.support.annotation.StyleableRes
 import android.util.AttributeSet
-import android.view.{ViewGroup, View}
+import android.view.{View, ViewGroup}
 import android.view.View._
 import android.widget.SeekBar
 import com.waz.zclient.ui.utils.ResourceUtils
 
 package object utils {
+
+  case class Rectangle(l: Int, t: Int, r: Int, b: Int)
+  object Rectangle {
+    val Empty = Rectangle(0, 0, 0, 0)
+    def apply(r: Rect): Rectangle = Rectangle(r.left, r.top, r.right, r.bottom)
+  }
 
   implicit class RichView(val view: View) extends AnyVal {
 
@@ -37,6 +43,17 @@ package object utils {
 
     def setMarginTop(m: Int) = {
       view.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = m
+      view.requestLayout()
+    }
+
+    def setMargin(r: Rectangle): Unit = setMargin(r.l, r.t, r.r, r.b)
+
+    def setMargin(l: Int, t: Int, r: Int, b: Int): Unit = {
+      val lp = view.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams]
+      lp.leftMargin = l
+      lp.topMargin = t
+      lp.rightMargin = r
+      lp.bottomMargin = b
       view.requestLayout()
     }
 

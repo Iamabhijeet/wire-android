@@ -1,3 +1,20 @@
+/**
+ * Wire
+ * Copyright (C) 2016 Wire Swiss GmbH
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.waz.zclient.messages.parts.assets
 
 import android.view.View
@@ -13,7 +30,6 @@ import com.waz.zclient.messages.parts.assets.DeliveryState.OtherUploading
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.utils.{StringUtils, _}
 import com.waz.zclient.views.ImageAssetDrawable
-import com.waz.zclient.views.ImageAssetDrawable.Padding
 import com.waz.zclient.views.ImageController.WireImage
 import com.waz.zclient.{R, ViewHelper}
 import org.threeten.bp.Duration
@@ -73,11 +89,12 @@ trait PlayableAsset extends ActionableAssetPart {
 }
 
 
-trait ImageLayoutAssetPart extends AssetPart {
+trait ImageLayoutAssetPart extends ContentAssetPart {
   protected val imageDim = message map { _.imageDimensions.getOrElse(Dim2(1, 1)) }
   protected val viewWidth = Signal[Int]()
 
-  private lazy val contentPadding = getDimenPx(R.dimen.content__padding_left)
+  private lazy val contentPaddingStart = getDimenPx(R.dimen.content__padding_left)
+  private lazy val contentPaddingEnd = getDimenPx(R.dimen.content__padding_right)
 
   val imageDrawable = new ImageAssetDrawable(message map { m => WireImage(m.assetId) })
 
@@ -86,8 +103,8 @@ trait ImageLayoutAssetPart extends AssetPart {
     Dim2(imW, imH) <- imageDim
   } yield {
     val pxW = toPx(imW)
-    val centered = w - 2 * contentPadding
-    val padded = w - contentPadding
+    val centered = w - contentPaddingStart - contentPaddingEnd
+    val padded = w - contentPaddingStart
     val width =
       if (imH > imW) math.min(pxW, centered)
       else if (pxW >= padded) w
@@ -101,10 +118,10 @@ trait ImageLayoutAssetPart extends AssetPart {
     w <- viewWidth
     Dim2(dW, dH) <- displaySize
   } yield {
-    if (dW >= w) Padding.Empty
+    if (dW >= w) Rectangle.Empty
     else {
-      val left = if (getLayoutDirection == View.LAYOUT_DIRECTION_LTR) contentPadding else w - contentPadding - dW
-      Padding(left, 0, w - dW - left, 0)
+      val left = if (getLayoutDirection == View.LAYOUT_DIRECTION_LTR) contentPaddingStart else w - contentPaddingStart - dW
+      Rectangle(left, 0, w - dW - left, 0)
     }
   }
 

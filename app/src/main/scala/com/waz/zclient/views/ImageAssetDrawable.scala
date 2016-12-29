@@ -31,7 +31,8 @@ import com.waz.threading.Threading
 import com.waz.ui.MemoryImageCache.BitmapRequest
 import com.waz.ui.MemoryImageCache.BitmapRequest.Regular
 import com.waz.utils.events.{EventContext, Signal}
-import com.waz.zclient.views.ImageAssetDrawable.{Padding, RequestBuilder, ScaleType, State}
+import com.waz.zclient.utils.Rectangle
+import com.waz.zclient.views.ImageAssetDrawable.{RequestBuilder, ScaleType, State}
 import com.waz.zclient.views.ImageController._
 import com.waz.zclient.{Injectable, Injector}
 
@@ -51,7 +52,7 @@ class ImageAssetDrawable(
 
   private val animator = ValueAnimator.ofFloat(0, 1).setDuration(750)
 
-  val padding = Signal(Padding.Empty)
+  val padding = Signal(Rectangle.Empty)
 
   animator.addUpdateListener(new AnimatorUpdateListener {
     override def onAnimationUpdate(animation: ValueAnimator): Unit = {
@@ -65,7 +66,7 @@ class ImageAssetDrawable(
     im <- src
     d <- dims if d.width > 0
     p <- padding
-    state <- bitmapState(im, d.width - p.left - p.right)
+    state <- bitmapState(im, d.width - p.l - p.r)
   } yield state
 
   state.on(Threading.Ui) { st =>
@@ -73,7 +74,7 @@ class ImageAssetDrawable(
   }
 
   background foreach { bg =>
-    dims.zip(padding) { case (_, Padding(l, t, r, b)) =>
+    dims.zip(padding) { case (_, Rectangle(l, t, r, b)) =>
       val bounds = getBounds
       bg.setBounds(bounds.left + l, bounds.top + t, bounds.right - r, bounds.bottom - b)
     }
@@ -101,9 +102,9 @@ class ImageAssetDrawable(
 
     def updateMatrix(b: Bitmap) = {
       val bounds = getBounds
-      val p = padding.currentValue.getOrElse(Padding.Empty)
-      scaleType(matrix, b.getWidth, b.getHeight, Dim2(bounds.width() - p.left - p.right, bounds.height() - p.top - p.bottom))
-      matrix.postTranslate(bounds.left + p.left, bounds.top + p.top)
+      val p = padding.currentValue.getOrElse(Rectangle.Empty)
+      scaleType(matrix, b.getWidth, b.getHeight, Dim2(bounds.width() - p.l - p.r, bounds.height() - p.t - p.b))
+      matrix.postTranslate(bounds.left + p.l, bounds.top + p.t)
     }
 
     def updateDrawingState(state: State) = {
@@ -196,11 +197,6 @@ object ImageAssetDrawable {
     case class Loading(src: ImageSource) extends State
     case class Loaded(src: ImageSource, override val bmp: Option[Bitmap], etag: Int = 0) extends State
     case class Failed(src: ImageSource) extends State
-  }
-
-  case class Padding(left: Int, top: Int, right: Int, bottom: Int)
-  object Padding {
-    val Empty = Padding(0, 0, 0, 0)
   }
 }
 

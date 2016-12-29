@@ -20,22 +20,51 @@ package com.waz.zclient.messages.parts
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
+import android.widget.FrameLayout
+import com.waz.model.{MessageContent, MessageData}
+import com.waz.threading.Threading
+import com.waz.zclient.R
 import com.waz.zclient.controllers.AssetsController
+import com.waz.zclient.controllers.drawing.IDrawingController.DrawingMethod
+import com.waz.zclient.controllers.drawing.IDrawingController.DrawingMethod._
+import com.waz.zclient.messages.MessageView.MsgBindOptions
 import com.waz.zclient.messages.MsgPart
 import com.waz.zclient.messages.parts.assets.ImageLayoutAssetPart
-import com.waz.zclient.utils._
+import com.waz.zclient.utils.RichView
 
-class ImagePartView(context: Context, attrs: AttributeSet, style: Int) extends View(context, attrs, style) with ImageLayoutAssetPart {
+class ImagePartView(context: Context, attrs: AttributeSet, style: Int) extends FrameLayout(context, attrs, style) with ImageLayoutAssetPart {
   def this(context: Context, attrs: AttributeSet) = this(context, attrs, 0)
   def this(context: Context) = this(context, null, 0)
 
   override val tpe: MsgPart = MsgPart.Image
 
+  override def inflate(): Unit = inflate(R.layout.message_image_content)
+
+  private lazy val assets = inject[AssetsController]
+  private val imageActions = findById[View](R.id.image_actions)
+
+  padding.on(Threading.Ui)(imageActions.setMargin)
+
+  findById[View](R.id.button_sketch).onClick(openDrawingFragment(DRAW))
+
+  findById[View](R.id.button_emoji).onClick(openDrawingFragment(EMOJI))
+
+  findById[View](R.id.button_text).onClick(openDrawingFragment(TEXT))
+
+  findById[View](R.id.button_fullscreen).onClick {
+    message.currentValue foreach (assets.showSingleImage(_, this))
+  }
+
+  override def set(msg: MessageData, part: Option[MessageContent], opts: MsgBindOptions): Unit = {
+    imageActions.setVisible(false)
+    super.set(msg, part, opts)
+  }
+
+  private def openDrawingFragment(drawingMethod: DrawingMethod) =
+    message.currentValue foreach (assets.openDrawingFragment(_, drawingMethod))
+
   setBackground(imageDrawable)
 
-  this.onClick {
-    message.currentValue foreach { msg =>
-      inject[AssetsController].showSingleImage(msg, this)
-    }
-  }
+  this.onClick(imageActions.setVisible(!imageActions.isVisible))
+
 }

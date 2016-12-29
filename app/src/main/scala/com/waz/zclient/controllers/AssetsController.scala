@@ -1,3 +1,20 @@
+/**
+ * Wire
+ * Copyright (C) 2016 Wire Swiss GmbH
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.waz.zclient.controllers
 
 import android.app.DownloadManager
@@ -25,9 +42,10 @@ import com.waz.zclient.utils.AssetUtils
 import com.waz.zclient.utils.ContextUtils._
 import com.waz.zclient.{Injectable, Injector, R}
 import org.threeten.bp.Duration
-
 import com.waz.ZLog._
 import com.waz.ZLog.ImplicitTag._
+import com.waz.zclient.controllers.drawing.IDrawingController
+import com.waz.zclient.controllers.drawing.IDrawingController.DrawingMethod
 
 import scala.PartialFunction._
 import scala.concurrent.Promise
@@ -42,7 +60,8 @@ class AssetsController(implicit context: Context, inj: Injector, ec: EventContex
   val messages = zms.map(_.messages)
 
   lazy val messageActionsController = inject[MessageActionsController]
-  lazy val singleImage = inject[ISingleImageController]
+  lazy val singleImage              = inject[ISingleImageController]
+  lazy val drawingController        = inject[IDrawingController]
 
 
   messageActionsController.onMessageAction {
@@ -93,6 +112,29 @@ class AssetsController(implicit context: Context, inj: Injector, ec: EventContex
       verbose(s"message loaded, opening single image for $m")
       singleImage.setViewReferences(container)
       singleImage.showSingleImage(m)
+    }
+  }
+
+  //FIXME: don't use java api
+  def openDrawingFragment(msg: MessageData, drawingMethod: DrawingMethod) = {
+    // obtain java message and wait for image asset to be loaded,
+    // this is required for SingleImageFragment to work properly
+    val m = ZMessaging.currentUi.messages.cachedOrNew(msg.id)
+    val p = Promise[ImageAsset]()
+    val imObserver = new ModelObserver[ImageAsset] {
+      override def updated(img: ImageAsset): Unit = if (img.getWidth > 0) p.trySuccess(img)
+    }
+    val observer = new ModelObserver[Message] {
+      override def updated(model: Message): Unit = imObserver.setAndUpdate(model.getImage)
+    }
+    observer.setAndUpdate(m)
+    p.future.onComplete { _ =>
+      observer.clear()
+      imObserver.clear()
+    }
+    p.future foreach { img =>
+      verbose(s"image loaded, opening drawing fragment for: $img")
+      drawingController.showDrawing(img, IDrawingController.DrawingDestination.SINGLE_IMAGE_VIEW, drawingMethod)
     }
   }
 
