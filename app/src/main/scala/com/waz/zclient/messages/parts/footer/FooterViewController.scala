@@ -73,12 +73,6 @@ class FooterViewController(implicit inj: Injector, context: Context, ec: EventCo
   } yield
     focused || expiring || (selfMsg && !liked)
 
-  val showLikeBtn = for {
-    liked <- isLiked
-    self <- isSelfMessage
-  } yield
-    liked || !self
-
   val ephemeralTimeout: Signal[Option[FiniteDuration]] = message.map(_.expiryTime) flatMap {
     case None => Signal const None
     case Some(expiry) if expiry <= Instant.now => Signal const None

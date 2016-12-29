@@ -123,8 +123,6 @@ class FooterPartView(context: Context, attrs: AttributeSet, style: Int) extends 
   likeButton.init(controller)
   likeDetails.init(controller)
 
-  controller.showLikeBtn.on(Threading.Ui) { likeButton.setVisible }
-
   controller.timestampText.zip(controller.linkColor).on(Threading.Ui) { case (string, color) =>
     timeStampAndStatus.setText(string)
     if (string.contains('_')) {
