@@ -22,7 +22,7 @@ import java.util
 import android.view.ViewGroup
 import com.waz.ZLog.ImplicitTag._
 import com.waz.ZLog._
-import com.waz.model.ConvId
+import com.waz.model.{ConvId, Dim2}
 import com.waz.model.ConversationData.ConversationType
 import com.waz.service.ZMessaging
 import com.waz.threading.Threading
@@ -33,7 +33,7 @@ import com.waz.zclient.messages.MessagesListView.UnreadIndex
 import com.waz.zclient.messages.RecyclerCursor.RecyclerNotifier
 import com.waz.zclient.{Injectable, Injector}
 
-class MessagesListAdapter(listWidth: Signal[Int])(implicit inj: Injector, ec: EventContext)
+class MessagesListAdapter(listDim: Signal[Dim2])(implicit inj: Injector, ec: EventContext)
   extends MessagesListView.Adapter() with Injectable { adapter =>
 
   verbose("MessagesListAdapter created")
@@ -94,7 +94,7 @@ class MessagesListAdapter(listWidth: Signal[Int])(implicit inj: Injector, ec: Ev
     val isSelf = zms.currentValue.exists(_.selfUserId == data.message.userId)
     val isFirstUnread = pos > 0 && !isSelf && unreadIndex.index == pos
     val isLastSelf = listController.isLastSelf(data.message.id)
-    val opts = MsgBindOptions(pos, isSelf, isLast, isLastSelf, isFirstUnread = isFirstUnread, listWidth.currentValue.getOrElse(0), convType)
+    val opts = MsgBindOptions(pos, isSelf, isLast, isLastSelf, isFirstUnread = isFirstUnread, listDim.currentValue.getOrElse(Dim2(0, 0)), convType)
 
     holder.bind(data, if (pos == 0) None else Some(message(pos - 1).message), opts)
   }

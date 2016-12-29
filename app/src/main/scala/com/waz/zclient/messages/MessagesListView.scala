@@ -25,7 +25,7 @@ import android.support.v7.widget.{DefaultItemAnimator, LinearLayoutManager, Recy
 import android.util.AttributeSet
 import com.waz.ZLog.ImplicitTag._
 import com.waz.ZLog._
-import com.waz.model.{ConvId, MessageData, MessageId}
+import com.waz.model.{ConvId, Dim2, MessageData, MessageId}
 import com.waz.service.messages.MessageAndLikes
 import com.waz.threading.Threading
 import com.waz.utils.events.{EventContext, Signal}
@@ -40,13 +40,12 @@ class MessagesListView(context: Context, attrs: AttributeSet, style: Int) extend
 
   import MessagesListView._
 
-  val width = Signal[Int]()
-  val height = Signal[Int]()
+  val viewDim = Signal[Dim2]()
   val layoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false) {
     override def supportsPredictiveItemAnimations(): Boolean = true
   }
-  val adapter = new MessagesListAdapter(width)
-  val scrollController = new ScrollController(adapter, height)
+  val adapter = new MessagesListAdapter(viewDim)
+  val scrollController = new ScrollController(adapter, viewDim.map(_.height))
 
   setHasFixedSize(true)
   setLayoutManager(layoutManager)
@@ -82,8 +81,7 @@ class MessagesListView(context: Context, attrs: AttributeSet, style: Int) extend
   })
 
   override def onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int): Unit = {
-    width ! (r - l)
-    height ! (b - t)
+    viewDim ! Dim2(r - l, b - t)
     super.onLayout(changed, l, t, r, b)
   }
 

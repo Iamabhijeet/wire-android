@@ -44,10 +44,10 @@ class VideoAssetPartView(context: Context, attrs: AttributeSet, style: Int) exte
   }.on(Threading.Ui)(durationView.setTextColor)
 
   val bg = deliveryState flatMap {
-    case OtherUploading => Signal.const[Drawable](progressDots)
+    case OtherUploading => Signal.const[Drawable](assetBackground)
     case _ =>
       imageDrawable.state map {
-        case ImageAssetDrawable.State.Failed(_) => progressDots
+        case ImageAssetDrawable.State.Failed(_) => assetBackground
         case _ => imageDrawable
       } orElse Signal.const[Drawable](imageDrawable)
   }

@@ -19,6 +19,8 @@ package com.waz.zclient.messages.parts.assets
 
 import android.view.View
 import android.widget.TextView
+import com.waz.ZLog.ImplicitTag._
+import com.waz.ZLog.verbose
 import com.waz.model.{AssetData, Dim2, MessageContent, MessageData}
 import com.waz.threading.Threading
 import com.waz.utils.events.Signal
@@ -42,8 +44,8 @@ trait AssetPart extends View with MessageViewPart with ViewHelper {
   val deliveryState = DeliveryState(message, asset)
   val completed = deliveryState.map(_ == DeliveryState.Complete)
 
-  val progressDots = new AssetBackground(deliveryState.map(_ == OtherUploading))
-  setBackground(progressDots)
+  val assetBackground = new AssetBackground(deliveryState.map(_ == OtherUploading))
+  setBackground(assetBackground)
 
   override def set(msg: MessageData, part: Option[MessageContent], opts: MsgBindOptions): Unit = {
     message ! msg
@@ -90,8 +92,11 @@ trait PlayableAsset extends ActionableAssetPart {
 
 
 trait ImageLayoutAssetPart extends ContentAssetPart {
+  import ImageLayoutAssetPart._
+
   protected val imageDim = message map { _.imageDimensions.getOrElse(Dim2(1, 1)) }
   protected val viewWidth = Signal[Int]()
+  protected val maxHeight = Signal[Int]()
 
   private lazy val contentPaddingStart = getDimenPx(R.dimen.content__padding_left)
   private lazy val contentPaddingEnd = getDimenPx(R.dimen.content__padding_right)
@@ -100,18 +105,28 @@ trait ImageLayoutAssetPart extends ContentAssetPart {
 
   val displaySize = for {
     w <- viewWidth
+    maxH <- maxHeight
     Dim2(imW, imH) <- imageDim
   } yield {
     val pxW = toPx(imW)
     val centered = w - contentPaddingStart - contentPaddingEnd
     val padded = w - contentPaddingStart
+
     val width =
       if (imH > imW) math.min(pxW, centered)
       else if (pxW >= padded) w
       else if (pxW >= centered) centered
       else pxW
 
-    Dim2(width, imH * width / imW)
+    val height = imH * width / imW
+
+    //fit image within view port height-wise (plus the little bit of buffer space), if it's not too tall. For super tall
+    //images, we leave them as is otherwise they might become too skinny
+    val heightDiff = (height - maxH).toDouble / maxH.toDouble
+    val scaleDownToHeight = maxH * (1 - scaleDownBuffer)
+    val scaleDown = if (height > scaleDownToHeight && heightDiff < scaleDownUnderLimit) scaleDownToHeight.toDouble / height.toDouble else 1D
+
+    Dim2((width * scaleDown).toInt, (height * scaleDown).toInt)
   }
 
   val padding = for {
@@ -133,11 +148,18 @@ trait ImageLayoutAssetPart extends ContentAssetPart {
 
   override def set(msg: MessageData, part: Option[MessageContent], opts: MsgBindOptions): Unit = {
     super.set(msg, part, opts)
-    viewWidth.mutateOrDefault(identity, opts.widthHint)
+    viewWidth.mutateOrDefault(identity, opts.listDimensions.width)
+    maxHeight ! opts.listDimensions.height
   }
 
   override def onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int): Unit = {
     super.onLayout(changed, left, top, right, bottom)
     viewWidth ! (right - left)
   }
+}
+
+object ImageLayoutAssetPart {
+  //a little bit of space for scaling images within the viewport
+  val scaleDownBuffer = 0.05
+  val scaleDownUnderLimit = 0.2 + scaleDownBuffer
 }

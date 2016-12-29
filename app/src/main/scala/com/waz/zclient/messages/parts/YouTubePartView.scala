@@ -98,7 +98,7 @@ class YouTubePartView(context: Context, attrs: AttributeSet, style: Int) extends
   }
 
   override def set(msg: MessageData, part: Option[MessageContent], opts: MsgBindOptions): Unit = {
-    width.mutateOrDefault(identity, opts.widthHint)
+    width.mutateOrDefault(identity, opts.listDimensions.width)
     part foreach { content ! _ }
   }
 

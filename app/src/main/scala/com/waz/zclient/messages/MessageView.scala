@@ -23,7 +23,7 @@ import android.view.{HapticFeedbackConstants, ViewGroup}
 import com.waz.ZLog.ImplicitTag._
 import com.waz.api.Message
 import com.waz.model.ConversationData.ConversationType
-import com.waz.model.{MessageData, MessageId}
+import com.waz.model.{Dim2, MessageData, MessageId}
 import com.waz.service.messages.MessageAndLikes
 import com.waz.utils.RichOption
 import com.waz.zclient.controllers.global.SelectionController
@@ -236,13 +236,13 @@ object MessageView {
   // Message properties calculated while binding, may not be directly related to message state,
   // should not be cached in message view as those can be valid only while set method is called
   case class MsgBindOptions(
-                         position: Int,
-                         isSelf: Boolean,
-                         isLast: Boolean,
-                         isLastSelf: Boolean, // last self message in conv
-                         isFirstUnread: Boolean,
-                         widthHint: Int,
-                         convType: ConversationType
+                             position: Int,
+                             isSelf: Boolean,
+                             isLast: Boolean,
+                             isLastSelf: Boolean, // last self message in conv
+                             isFirstUnread: Boolean,
+                             listDimensions: Dim2,
+                             convType: ConversationType
                        )
 }
 
