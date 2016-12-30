@@ -61,7 +61,7 @@
         />
 
     <CheckBoxPreference
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="@string/pref_dev_calling_v3_key"
         android:title="@string/pref_dev_calling_v3_title"
         android:summary="@string/pref_dev_calling_v3_summary"
